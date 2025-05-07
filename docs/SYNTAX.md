@@ -119,271 +119,50 @@ Tipos de instrucciones comunes | Common instruction types:
 
 _Español_
 
-Esta sintaxis permite definir la relación entre variables de metadata y su contenido generativo de forma más declarativa y autocontenida:
+Esta sintaxis es fundamental para KMC y establece una regla clara: para que una variable de metadata (ej. `[{doc:mi_variable}]`) sea renderizada con contenido generado, **debe existir como un placeholder en el cuerpo del documento Y además tener un bloque `KMC_DEFINITION` asociado.**
 
-_English_
+El bloque `KMC_DEFINITION FOR [{doc:mi_variable}]` no inserta contenido directamente en su propia ubicación. En su lugar, define cómo se generará el contenido para todas las instancias del placeholder `[{doc:mi_variable}]` que se encuentren en el documento. Esta definición es global para el documento una vez declarada y puede ser capturada por el SDK para su reutilización.
 
-This syntax allows defining the relationship between metadata variables and their generative content in a more declarative and self-contained way:
+#### Reglas de Renderizado | Rendering Rules
 
+**Regla fundamental**: 
+- Las variables que comienzan con `[]` (formato `[{tipo:nombre}]`) serán renderizadas una vez procesadas por el sistema.
+- Las variables que comienzan con `{}` (formato `{{categoria:subtipo:nombre}}`) nunca serán renderizadas directamente, sino que se utilizan como fuentes generativas en las definiciones.
+
+Esta distinción es importante porque separa claramente las declaraciones de variables (placeholders donde aparecerá el contenido) de las fuentes que generan dicho contenido.
+
+Ejemplo de uso:
 ```markdown
-<!-- KMC_DEFINITION FOR [{doc:titulo_modulo}]:
+[{doc:objetivos_de_aprendizaje}]
+<!-- KMC_DEFINITION FOR [{doc:objetivos_de_aprendizaje}]:
 GENERATIVE_SOURCE = {{ai:gpt4:extract_title}}
-PROMPT = "Extrae el título principal del módulo basándote en [{kb:contenido}]"
-FORMAT = "text/plain; max_length=80"
--->
-
-## [{doc:titulo_modulo}]
-
-...contenido del módulo...
-```
-
-#### Estructura | Structure
-
-```
-<!-- KMC_DEFINITION FOR [{variable_metadata}]:
-GENERATIVE_SOURCE = {{variable_generativa}}
-PROMPT = "Instrucción para generar el contenido"
-FORMAT = "formato_deseado; parámetros_adicionales"
+PROMPT = "Extrae un listado de objetivos y resultados de aprendizaje a partir de  [{kb:contenido}]. Se definen tantos RA y OA como sean necesarios para cubrir los objetivos de aprendizaje"
+FORMAT = "Listado en formato RA1: Resultado de aprendizaje 1, OA1.1 Objetivo de aprendizaje 1 asociado RA1, OA1.2 Objetivo de aprendizaje 2 asociado RA1, "
 -->
 ```
-
-#### Parámetros | Parameters
-
-| Parámetro | Parameter | Requerido | Required | Descripción | Description |
-|-----------|-----------|-----------|----------|-------------|-------------|
-| `GENERATIVE_SOURCE` | Yes | Sí | Variable generativa que producirá el contenido | Generative variable that will produce the content |
-| `PROMPT` | Yes | Sí | Instrucción clara para generar el valor (puede incluir otras variables) | Clear instruction to generate the value (may include other variables) |
-| `FORMAT` | No | No | Especificación del formato deseado para la salida | Specification of the desired output format |
-
-#### Ejemplos de Uso | Usage Examples
-
-**Ejemplo 1: Extracción de información | Example 1: Information extraction**
-```markdown
-<!-- KMC_DEFINITION FOR [{doc:nombre_modulo}]:
-GENERATIVE_SOURCE = {{ai:gpt4:extract_module_name}}
-PROMPT = "Analiza la documentación de [{kb:docs}] y determina el nombre del módulo actual"
-FORMAT = "text/plain; max_length=100"
--->
-
-# Módulo: [{doc:nombre_modulo}]
-```
-
-**Ejemplo 2: Generación de contenido educativo | Example 2: Educational content generation**
-```markdown
-<!-- KMC_DEFINITION FOR [{doc:objetivos_aprendizaje}]:
-GENERATIVE_SOURCE = {{ai:gpt4:gen_learning_objectives}}
-PROMPT = "Basado en el contenido de [[project:curriculum]] y [{kb:tema_actual}], genera 3-5 objetivos de aprendizaje claros y medibles para este módulo"
-FORMAT = "markdown; bullet_list"
--->
-
-## Objetivos de Aprendizaje
-
-[{doc:objetivos_aprendizaje}]
-```
-
-**Ejemplo 3: Múltiples secciones con un patrón | Example 3: Multiple sections with a pattern**
-```markdown
-<!-- KMC_DEFINITION FOR [{doc:section_*}]:
-GENERATIVE_SOURCE = {{ai:gpt4:gen_section}}
-PROMPT_TEMPLATE = "Genera una sección sobre {topic} para el curso [[project:nombre]]"
-TOPICS = ["introduccion", "conceptos_basicos", "casos_avanzados"]
-FORMAT = "markdown"
--->
-
-## [{doc:section_introduccion}]
-
-## [{doc:section_conceptos_basicos}]
-
-## [{doc:section_casos_avanzados}]
-```
-
-#### Ventajas de esta Sintaxis | Advantages of this Syntax
-
-- **Declarativa | Declarative**: Define claramente la relación entre variables | Clearly defines the relationship between variables
-- **Autocontenida | Self-contained**: Todo en un mismo lugar (metadata, fuente generativa, instrucciones) | Everything in one place (metadata, generative source, instructions)
-- **Trazable | Traceable**: Facilita ver qué genera cada valor | Makes it easy to see what generates each value
-- **No invasiva | Non-invasive**: Los comentarios HTML no interrumpen visualmente el documento final | HTML comments don't visually interrupt the final document
-- **Extensible | Extensible**: Se pueden añadir nuevos parámetros al formato según sea necesario | New parameters can be added to the format as needed
-
-## 3. Encadenamiento de Variables | Variable Chaining
-
-### 3.1 Referencias en Prompts | References in Prompts
-
-_Español_
-
-Las variables pueden referenciarse dentro de las instrucciones de otras variables:
 
 _English_
 
-Variables can be referenced within instructions for other variables:
+This syntax is fundamental to KMC and establishes a clear rule: for a metadata variable (e.g., `[{doc:my_variable}]`) to be rendered with generated content, **it must exist as a placeholder in the document body AND also have an associated `KMC_DEFINITION` block.**
 
+The `KMC_DEFINITION FOR [{doc:my_variable}]` block does not directly insert content at its own location. Instead, it defines how content will be generated for all instances of the `[{doc:my_variable}]` placeholder found within the document. This definition is global for the document once declared and can be captured by the SDK for reuse.
+
+#### Rendering Rules
+
+**Fundamental rule**:
+- Variables that begin with `[]` (format `[{type:name}]`) will be rendered once processed by the system.
+- Variables that begin with `{}` (format `{{category:subtype:name}}`) will never be rendered directly, but are used as generative sources in definitions.
+
+This distinction is important because it clearly separates variable declarations (placeholders where content will appear) from the sources that generate that content.
+
+Usage example:
 ```markdown
-{{api:finance:datos_mercado}}
-<!-- API_SOURCE: https://api.market.com/v1/sector_analysis?industry=[[project:industria]] -->
-
-{{ai:gpt4:analisis_mercado}}
-<!-- AI_PROMPT FOR {{ai:gpt4:analisis_mercado}}: 
-Analiza los siguientes datos de mercado y extrae las 3 tendencias principales:
-{{api:finance:datos_mercado}}
+[{doc:learning_objectives}]
+<!-- KMC_DEFINITION FOR [{doc:learning_objectives}]:
+GENERATIVE_SOURCE = {{ai:gpt4:extract_title}}
+PROMPT = "Extract a list of learning objectives and outcomes from [{kb:content}]. Define as many LOs and LOs as needed to cover the learning objectives"
+FORMAT = "List in format LO1: Learning outcome 1, OBJ1.1 Learning objective 1 associated with LO1, OBJ1.2 Learning objective 2 associated with LO1, "
 -->
-```
-
-### 3.2 Variables de Contexto en Prompts | Context Variables in Prompts
-
-```markdown
-<!-- AI_PROMPT FOR {{ai:gpt4:resumen_legal}}: 
-Genera un resumen legal considerando:
-- País: [[org:pais]]
-- Industria: [[project:industria]]
-- Regulaciones: [{kb:regulaciones_aplicables}]
--->
-```
-
-## 4. Lógica de Control | Control Logic
-
-### 4.1 Bucles (Iteración) | Loops (Iteration)
-
-_Español_
-
-Para iterar sobre colecciones de datos:
-
-_English_
-
-To iterate over data collections:
-
-```markdown
-## Entregables del Proyecto | Project Deliverables
-{{#each project:entregables}}
-- **[{doc:nombre_entregable}]:** [{doc:descripcion_entregable}]
-  *Estado | Status:* {{tool:workflow:estado_entregable}}
-{{/each}}
-```
-
-### 4.2 Condicionales | Conditionals
-
-_Español_
-
-Para inclusión condicional de contenido:
-
-_English_
-
-For conditional inclusion of content:
-
-```markdown
-{{#if project:tiene_financiamiento}}
-## Presupuesto | Budget
-{{ai:gpt4:desglose_presupuesto}}
-<!-- AI_PROMPT FOR {{ai:gpt4:desglose_presupuesto}}: 
-Genera una tabla con el desglose del presupuesto del proyecto.
--->
-{{else}}
-## Propuesta de Financiamiento | Funding Proposal
-{{ai:gpt4:propuesta_financiamiento}}
-<!-- AI_PROMPT FOR {{ai:gpt4:propuesta_financiamiento}}:
-Genera una propuesta para obtener financiamiento para este proyecto.
--->
-{{/if}}
-```
-
-## 5. Sintaxis Especial | Special Syntax
-
-### 5.1 Formatos Específicos | Specific Formats
-
-_Español_
-
-Para ciertos tipos de contenido generado, se pueden especificar formatos:
-
-_English_
-
-For certain types of generated content, formats can be specified:
-
-```markdown
-{{ai:gpt4:tabla_resumen format=markdown_table}}
-<!-- AI_PROMPT FOR {{ai:gpt4:tabla_resumen}}: 
-Genera una tabla comparativa de los principales competidores.
--->
-
-{{ai:gpt4:diagrama format=mermaid}}
-<!-- AI_PROMPT FOR {{ai:gpt4:diagrama}}: 
-Crea un diagrama de flujo del proceso descrito en el proyecto.
--->
-```
-
-### 5.2 Parámetros Adicionales | Additional Parameters
-
-_Español_
-
-Se pueden especificar parámetros adicionales para modificar el comportamiento de la variable:
-
-_English_
-
-Additional parameters can be specified to modify the behavior of the variable:
-
-```markdown
-{{ai:gpt4:resumen_ejecutivo max_tokens=300 temperature=0.7}}
-<!-- AI_PROMPT FOR {{ai:gpt4:resumen_ejecutivo}}: 
-Genera un resumen ejecutivo conciso del proyecto.
--->
-```
-
-## 6. Ejemplo Completo | Complete Example
-
-```markdown
-# [[project:nombre]] (v[{doc:version}])
-
-**Cliente | Client:** [[org:nombre_empresa]]
-**Fecha | Date:** [[project:fecha_inicio]]
-**Autor | Author:** [[user:nombre_completo]]
-
-## Resumen Ejecutivo | Executive Summary
-{{ai:gpt4:resumen_ejecutivo}}
-<!-- AI_PROMPT FOR {{ai:gpt4:resumen_ejecutivo}}: 
-Genera un resumen ejecutivo conciso (máximo 200 palabras) del proyecto [[project:nombre]].
-Destaca el objetivo principal, el valor para el cliente y los resultados esperados.
--->
-
-## Contexto de Mercado | Market Context
-{{api:market:datos_industria}}
-<!-- API_SOURCE: https://api.market.com/v1/industry?sector=[[org:industria]]&date={{project:fecha_inicio}} -->
-
-<!-- KMC_DEFINITION FOR [{doc:analisis_tendencias}]:
-GENERATIVE_SOURCE = {{ai:gpt4:analisis_tendencias}}
-PROMPT = "Analiza las siguientes tendencias de mercado y explica cómo afectan al proyecto:
-{{api:market:datos_industria}}"
-FORMAT = "markdown"
--->
-
-### Análisis de Tendencias | Trend Analysis
-[{doc:analisis_tendencias}]
-
-## Entregables | Deliverables
-{{#each project:entregables}}
-- **[{doc:nombre_entregable}]:** [{doc:descripcion_entregable}]
-  *Fecha de entrega | Delivery date:* [{doc:fecha_entrega_entregable}]
-  *Estado | Status:* {{tool:workflow:estado_entregable}}
-{{/each}}
-
-{{#if project:tiene_riesgos_identificados}}
-## Análisis de Riesgos | Risk Analysis
-{{ai:gpt4:analisis_riesgos}}
-<!-- AI_PROMPT FOR {{ai:gpt4:analisis_riesgos}}: 
-Identifica los 3 principales riesgos del proyecto y sugiere estrategias de mitigación para cada uno.
--->
-{{/if}}
-
-## Referencias | References
-1. [{kb:documento_referencia_1}]
-2. [{kb:documento_referencia_2}]
-
-<!-- KMC_DEFINITION FOR [{doc:glosario}]:
-GENERATIVE_SOURCE = {{ai:gpt4:glosario}}
-PROMPT = "Genera un glosario de términos técnicos relevantes para este proyecto.
-Formato: término - definición breve"
-FORMAT = "markdown; definition_list"
--->
-
-## Apéndice: Glosario | Appendix: Glossary
-[{doc:glosario}]
 ```
 
 ## 7. Mejores Prácticas | Best Practices
@@ -400,15 +179,20 @@ FORMAT = "markdown; definition_list"
 
 3. **Estructura del Documento | Document Structure:**
    - Usa encabezados jerárquicos (# para título, ## para secciones principales) | Use hierarchical headings (# for title, ## for main sections)
-   - Coloca las definiciones KMC_DEFINITION antes de usar las variables | Place KMC_DEFINITION before using the variables
-   - Agrupa variables relacionadas en secciones lógicas | Group related variables in logical sections
+   - Agrupa bloques KMC_DEFINITION relacionados | Group related KMC_DEFINITION blocks
+   - Coloca las definiciones KMC_DEFINITION cerca del principio del documento o cerca de donde se utiliza por primera vez el placeholder | Place KMC_DEFINITION blocks near the beginning of the document or near where the placeholder is first used
 
-4. **Encadenamiento | Chaining:**
-   - Evita ciclos de dependencias entre variables | Avoid dependency cycles between variables
-   - Ordena las variables lógicamente (datos → análisis → recomendaciones) | Order variables logically (data → analysis → recommendations)
-   - Documenta claramente las dependencias complejas | Clearly document complex dependencies
+4. **Declaración y Definición con `KMC_DEFINITION` (Regla Fundamental):**
+   - _Español_: Para que una variable de metadata (ej. `[{doc:mi_contenido_dinamico}]`) muestre contenido generado, primero debe ser **declarada como un placeholder** en la ubicación deseada dentro del cuerpo del documento. Segundo, debe existir un bloque `<!-- KMC_DEFINITION FOR [{doc:mi_contenido_dinamico}]: ... -->` que defina su fuente generativa y prompt. Esta definición es global para el documento y el SDK puede capturarla para su reutilización.
+   
+   - _English_: For a metadata variable (e.g., `[{doc:my_dynamic_content}]`) to display generated content, it must first be **declared as a placeholder** at the desired location within the document body. Second, there must be a `<!-- KMC_DEFINITION FOR [{doc:my_dynamic_content}]: ... -->` block that defines its generative source and prompt. This definition is global for the document and the SDK can capture it for reuse.
 
-5. **Uso de KMC_DEFINITION | Using KMC_DEFINITION:**
-   - Prefiere la sintaxis KMC_DEFINITION para relacionar variables de metadata con fuentes generativas | Prefer KMC_DEFINITION syntax to relate metadata variables with generative sources
-   - Define templates para patrones repetitivos | Define templates for repetitive patterns
-   - Especifica claramente los formatos esperados | Clearly specify expected formats
+5. **Reglas de Renderizado | Rendering Rules:**
+   - _Español_: Recuerda la regla fundamental: las variables con formato `[{tipo:nombre}]` se renderizan con su contenido, mientras que las variables con formato `{{categoria:subtipo:nombre}}` NUNCA se renderizan directamente (solo se usan como fuentes generativas).
+   
+   - _English_: Remember the fundamental rule: variables with format `[{type:name}]` are rendered with their content, while variables with format `{{category:subtype:name}}` are NEVER rendered directly (they are only used as generative sources).
+
+6. **Reutilización de Variables | Variable Reuse:**
+   - Define variables comunes al inicio del documento | Define common variables at the beginning of the document
+   - Reutiliza las mismas variables para contenido similar | Reuse the same variables for similar content
+   - Aprovecha la capacidad del SDK para capturar definiciones | Take advantage of the SDK's ability to capture definitions

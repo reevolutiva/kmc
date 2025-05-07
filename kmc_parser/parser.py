@@ -273,6 +273,12 @@ class KMCParser:
         """
         Renderiza un documento KMC reemplazando todas las variables por sus valores.
         
+        Reglas de renderizado:
+        1. Variables contextuales [[tipo:nombre]] - Siempre se renderizan
+        2. Variables de metadata [{tipo:nombre}] - Se renderizan cuando tienen definiciones o handlers
+        3. Variables generativas {{categoria:subtipo:nombre}} - NUNCA se renderizan directamente,
+           solo se utilizan como fuentes generativas en definiciones KMC_DEFINITION
+        
         Args:
             content (str): Contenido del documento KMC
             
@@ -296,12 +302,12 @@ class KMCParser:
                 var.value = value
                 result = result.replace(var.fullname, value)
         
-        # Finalmente procesar las variables generativas
+        # Variables generativas NO se renderizan directamente en el texto final
+        # Solo se utilizan como fuentes generativas en definiciones KMC_DEFINITION
+        # Limpiamos las referencias a variables generativas del resultado
         for var in doc.generative_vars:
-            value = self._resolve_generative_var(var, doc)
-            if value is not None:
-                var.value = value
-                result = result.replace(var.fullname, value)
+            # No reemplazamos la variable en el texto, su presencia es solo para referencia
+            pass
         
         # Eliminar comentarios de instrucciones
         result = re.sub(r'<!-- (AI_PROMPT|API_SOURCE|TOOL_CONFIG|CALC_FORMULA).+?-->', '', result, flags=re.DOTALL)

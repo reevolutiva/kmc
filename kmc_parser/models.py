@@ -104,8 +104,14 @@ class KMCVariableDefinition:
     Representa una definición integrada de variable que vincula una variable de metadata
     con una fuente generativa y sus instrucciones correspondientes.
     
-    Esta clase implementa la nueva sintaxis KMC_DEFINITION que permite definir de forma
+    Esta clase implementa la sintaxis KMC_DEFINITION que permite definir de forma
     declarativa la relación entre variables de metadata y su contenido generativo.
+    
+    Regla fundamental:
+    - Las variables de metadata (tipo [{doc:variable}]) son placeholders que se renderizan
+      con contenido generado por variables generativas (tipo {{ai:modelo:nombre}})
+    - Las variables generativas NUNCA se renderizan directamente, solo se utilizan como
+      fuentes de generación en definiciones KMC_DEFINITION
     """
     
     def __init__(self, metadata_var, generative_var, prompt, format=None):
@@ -184,6 +190,7 @@ class KMCVariableDefinition:
         Returns:
             KMCVariableDefinition: Instancia de la definición o None si no es válido
         """
+        # Patrón actualizado para capturar el formato completo de KMC_DEFINITION
         pattern = r'KMC_DEFINITION FOR \[\{(.+?)\}\]:\s*GENERATIVE_SOURCE = \{\{(.+?)\}\}\s*PROMPT = "(.+?)"(?:\s*FORMAT = "(.+?)")?'
         match = re.search(pattern, comment, re.DOTALL)
         

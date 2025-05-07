@@ -1,0 +1,15 @@
+LICENSE
+README.md
+setup.py
+kmc_parser/__init__.py
+kmc_parser/models.py
+kmc_parser/parser.py
+kmc_parser.egg-info/PKG-INFO
+kmc_parser.egg-info/SOURCES.txt
+kmc_parser.egg-info/dependency_links.txt
+kmc_parser.egg-info/requires.txt
+kmc_parser.egg-info/top_level.txt
+kmc_parser/integrations/__init__.py
+kmc_parser/integrations/itscop.py
+kmc_parser/integrations/llamaindex.py
+tests/test_variable_definition.py

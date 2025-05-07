@@ -1,0 +1,38 @@
+Metadata-Version: 2.4
+Name: kmc-parser
+Version: 0.1.0
+Summary: Kimfe Markdown Convention Parser - Un parser para plantillas inteligentes con LLMs
+Home-page: https://kimfe.com
+Author: Kimfe Team
+Author-email: info@kimfe.com
+Keywords: markdown,llm,template,ai,kimfe
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Requires-Python: >=3.8
+License-File: LICENSE
+Requires-Dist: regex>=2022.1.18
+Requires-Dist: llama-index>=0.8.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: black>=22.1.0; extra == "dev"
+Requires-Dist: isort>=5.10.1; extra == "dev"
+Requires-Dist: mypy>=0.941; extra == "dev"
+Provides-Extra: langchain
+Requires-Dist: langchain>=0.0.200; extra == "langchain"
+Provides-Extra: crewai
+Requires-Dist: crewai>=0.1.0; extra == "crewai"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license-file
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

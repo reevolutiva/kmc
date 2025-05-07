@@ -47,6 +47,8 @@ Este enfoque unificado permite crear plantillas dinámicas, interactivas y adapt
   *Compatible with standard Markdown - works with all Markdown viewers*
 - **Definiciones integradas de variables** - sintaxis declarativa que relaciona variables de metadatos con fuentes generativas  
   *Integrated variable definitions - declarative syntax that relates metadata variables with generative sources*
+- **Reglas de renderizado claras** - variables con `[]` se renderizan una vez procesadas, variables con `{}` nunca se renderizan directamente  
+  *Clear rendering rules - variables with `[]` are rendered once processed, variables with `{}` are never rendered directly*
 
 ## Arquitectura | Architecture
 

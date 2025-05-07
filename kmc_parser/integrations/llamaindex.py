@@ -2,8 +2,7 @@
 Integración de KMC Parser con LlamaIndex
 """
 from typing import Dict, Any, Callable, Optional, List, Tuple, Union
-from llama_index.core import VectorStoreIndex, QueryEngine
-from llama_index.core.response_synthesizers import ResponseSynthesizer
+from llama_index.core import VectorStoreIndex
 
 
 class LlamaIndexHandler:
@@ -17,8 +16,8 @@ class LlamaIndexHandler:
     def __init__(
         self, 
         index: Optional[VectorStoreIndex] = None,
-        query_engine: Optional[QueryEngine] = None,
-        synthesizer: Optional[ResponseSynthesizer] = None,
+        query_engine: Optional[Any] = None,
+        synthesizer: Optional[Any] = None,
         context_vars: Dict[str, Any] = None
     ):
         """
