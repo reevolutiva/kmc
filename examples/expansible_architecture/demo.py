@@ -349,6 +349,43 @@ Genera una lista de tareas pendientes basadas en los eventos del calendario.
     print("============================")
 
 
+def ejemplo_plugin_llamaindex():
+    """Demuestra el uso del plugin LlamaIndex."""
+    print("\n=== EJEMPLO 5: USANDO EL PLUGIN LLAMAINDEX ===")
+    
+    # Crear una nueva instancia de parser para este ejemplo
+    parser = KMCParser()
+    
+    # Configurar y registrar el plugin de LlamaIndex
+    llamaindex_plugin_config = {
+        "query": "¿Cuál es la capital de Francia?"
+    }
+    
+    from kmc_parser.extensions.plugin_llamaindex import LlamaIndexGenerativeHandler
+    
+    llamaindex_plugin = LlamaIndexGenerativeHandler( config=llamaindex_plugin_config)
+    plugin_manager.register_plugin(llamaindex_plugin)
+    
+    # Contenido markdown de ejemplo
+    # {{tool:llamaindex:hello}}
+    markdown = """
+    # Consulta LlamaIndex
+    ## Pregunta
+    <!-- KMC_DEFINITION FOR [{tool:llamaindex}]:
+    GENERATIVE_SOURCE = {{tool:llamaindex}}
+    PROMPT = "Extrae el título principal del módulo basándote en [{kb:contenido}]"
+    FORMAT = "text/plain; max_length=80"
+    --> 
+    ## Respuesta
+    [{tool:llamaindex}]
+    """
+        
+    resultado = parser.process_document(markdown_content=markdown)
+    print("=== DOCUMENTO RENDERIZADO ===")
+    print(resultado)
+    print("============================")
+    
+
 if __name__ == "__main__":
     print("==================================================")
     print("  DEMOSTRACIÓN DE LA ARQUITECTURA EXPANDIBLE KMC")
@@ -356,10 +393,11 @@ if __name__ == "__main__":
     
     try:
         # Ejecutar ejemplos
-        ejemplo_handlers_predefinidos()
-        ejemplo_custom_handler()
-        ejemplo_uso_plugin()
-        ejemplo_plugin_personalizado()
+        #ejemplo_handlers_predefinidos()
+        #ejemplo_custom_handler()
+        #ejemplo_uso_plugin()
+        #ejemplo_plugin_personalizado()
+        ejemplo_plugin_llamaindex()
         
         print("\n¡Demostración completada con éxito!")
     except Exception as e:
