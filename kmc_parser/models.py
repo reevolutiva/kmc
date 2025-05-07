@@ -49,6 +49,7 @@ class GenerativeVariable:
     prompt: Optional[str] = None  # Prompt o instrucciones asociadas
     parameters: Dict[str, Any] = None  # Parámetros adicionales
     value: Optional[str] = None  # Valor resuelto (si está disponible)
+    format: Optional[str] = None  # Formato deseado para la salida
     
     def __post_init__(self):
         """Inicializa valores por defecto"""

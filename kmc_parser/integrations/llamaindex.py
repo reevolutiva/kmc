@@ -38,17 +38,30 @@ class LlamaIndexHandler:
         if self.index is not None and self.query_engine is None:
             self.query_engine = self.index.as_query_engine()
     
-    def __call__(self, var_name: str, prompt: str) -> str:
+    def __call__(self, var):
         """
         Genera contenido usando LlamaIndex basándose en el prompt.
         
+        Esta implementación es compatible con la nueva API de KMC que pasa
+        un objeto GenerativeVariable completo en lugar de parámetros separados.
+        
         Args:
-            var_name: Nombre de la variable (usado para personalizar la consulta)
-            prompt: Prompt para generar el contenido
+            var: Variable generativa (GenerativeVariable) o nombre de la variable (str)
             
         Returns:
             Contenido generado
         """
+        # Compatibilidad con la API anterior
+        if isinstance(var, str):
+            var_name = var
+            prompt = ""
+            format_type = None
+        else:
+            # Nueva API: recibe un objeto GenerativeVariable completo
+            var_name = var.name
+            prompt = var.prompt
+            format_type = var.parameters.get("format") if var.parameters else None
+            
         if not prompt:
             prompt = f"Genera contenido relevante para {var_name}"
             

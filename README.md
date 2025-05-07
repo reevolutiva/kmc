@@ -12,6 +12,9 @@ KMC se encuentra en desarrollo activo y cuenta con los siguientes componentes:
 *KMC is in active development and includes the following components:*
 
 - **Core parser**: Implementado en `kmc_parser/parser.py` *(Implemented in `kmc_parser/parser.py`)*
+- **Registro central**: Sistema de registro de handlers en `kmc_parser/core/registry.py` *(Central registry: Handler registration system in `kmc_parser/core/registry.py`)*
+- **Handlers base**: Clases base para diferentes tipos de handlers en `kmc_parser/handlers/base.py` *(Base handlers: Base classes for different types of handlers in `kmc_parser/handlers/base.py`)*
+- **Sistema de plugins**: Gestión de plugins en `kmc_parser/extensions/plugin_manager.py` *(Plugin system: Plugin management in `kmc_parser/extensions/plugin_manager.py`)*
 - **Modelos de datos**: Definidos en `kmc_parser/models.py` *(Data models: Defined in `kmc_parser/models.py`)*
 - **Integraciones**: Disponibles en `kmc_parser/integrations/` *(Integrations: Available in `kmc_parser/integrations/`)*
 - **Documentación**: README.md principal y guía de sintaxis en `docs/SYNTAX.md` *(Documentation: Main README.md and syntax guide in `docs/SYNTAX.md`)*
@@ -39,6 +42,8 @@ Este enfoque unificado permite crear plantillas dinámicas, interactivas y adapt
   *Clear and consistent syntax that differentiates between variable types*
 - **Sistema modular extensible** para añadir nuevos tipos de variables y handlers  
   *Extensible modular system for adding new types of variables and handlers*
+- **Arquitectura expandible** con registro centralizado y sistema de plugins  
+  *Expandable architecture with centralized registry and plugin system*
 - **Integración con LlamaIndex** para búsqueda semántica y generación basada en conocimiento  
   *Integration with LlamaIndex for semantic search and knowledge-based generation*
 - **Soporte para encadenamiento de variables** para workflows complejos  
@@ -58,27 +63,48 @@ KMC consta de varios componentes:
 1. **Parser KMC** (`kmc_parser/parser.py`): Núcleo que analiza y procesa documentos KMC  
    *KMC Parser (`kmc_parser/parser.py`): Core that analyzes and processes KMC documents*
 
-2. **Handlers de Variables** (`kmc_parser/models.py`): Módulos para resolver diferentes tipos de variables  
-   *Variable Handlers (`kmc_parser/models.py`): Modules for resolving different types of variables*
+2. **Sistema de Registro Centralizado** (`kmc_parser/core/registry.py`): Punto único para registrar y recuperar handlers de variables  
+   *Centralized Registry System (`kmc_parser/core/registry.py`): Single point for registering and retrieving variable handlers*
    ```python
-   # kmc_parser/models.py
-   class VariableHandler:
-       def __init__(self, config):
-           self.config = config
-           self.handlers = {}
-
-       def register_handler(self, handler_type: str, handler: callable):
-           self.handlers[handler_type] = handler
-
-       def resolve(self, var_type: str, var_name: str):
-           handler = self.handlers.get(var_type)
-           return handler(var_name) if handler else f"<{var_type}:{var_name}>"
+   from kmc_parser import registry
+   
+   # Registrar un handler para variables de proyecto
+   registry.register_context_handler("project", mi_handler_proyecto)
+   
+   # Obtener un handler registrado
+   handler = registry.get_context_handler("project")
    ```
 
-3. **Integraciones** (`kmc_parser/integrations/`): Conectores para frameworks externos (LlamaIndex, etc.)  
+3. **Jerarquía de Handlers** (`kmc_parser/handlers/base.py`): Clases base para diferentes tipos de variables  
+   *Handler Hierarchy (`kmc_parser/handlers/base.py`): Base classes for different types of variables*
+   ```python
+   from kmc_parser import ContextHandler, context_handler
+   
+   @context_handler("user")
+   class UserHandler(ContextHandler):
+       def _get_context_value(self, var_name):
+           # Implementación para obtener valor de variable contextual
+           return f"Valor para {var_name}"
+   ```
+
+4. **Sistema de Plugins** (`kmc_parser/extensions/plugin_manager.py`): Marco para extender la funcionalidad del parser  
+   *Plugin System (`kmc_parser/extensions/plugin_manager.py`): Framework for extending parser functionality*
+   ```python
+   from kmc_parser import KMCPlugin, plugin_manager
+   
+   class MiPlugin(KMCPlugin):
+       def initialize(self):
+           # Configurar recursos y registrar handlers
+           return True
+   
+   # Registrar el plugin
+   plugin_manager.register_plugin(MiPlugin())
+   ```
+
+5. **Integraciones** (`kmc_parser/integrations/`): Conectores para frameworks externos (LlamaIndex, etc.)  
    *Integrations (`kmc_parser/integrations/`): Connectors for external frameworks (LlamaIndex, etc.)*
 
-4. **Sistema de Definición de Variables** (`kmc_parser/models.py:KMCVariableDefinition`): Implementa la sintaxis declarativa para relacionar variables  
+6. **Sistema de Definición de Variables** (`kmc_parser/models.py:KMCVariableDefinition`): Implementa la sintaxis declarativa para relacionar variables  
    *Variable Definition System (`kmc_parser/models.py:KMCVariableDefinition`): Implements declarative syntax to relate variables*
 
 ## Sintaxis básica | Basic Syntax
@@ -142,46 +168,130 @@ pip install -e ".[langchain,crewai]"
 
 ## Uso básico | Basic Usage
 
+El KMC Parser ahora incorpora una arquitectura expandible que facilita la extensión del sistema y la integración de nuevas funcionalidades a través del registro centralizado y el sistema de plugins.
+
+*The KMC Parser now incorporates an expandable architecture that facilitates system extension and integration of new functionalities through the centralized registry and plugin system.*
+
+### Uso simple con registro automático | Simple usage with automatic registration
+
 ```python
 from kmc_parser import KMCParser
-from kmc_parser.integrations import LlamaIndexHandler
 
 # Crear el parser | Create the parser
 parser = KMCParser()
 
-# Registrar handlers para diferentes tipos de variables | Register handlers for different variable types
-parser.register_context_handler("project", lambda var: "Proyecto Demo")
-parser.register_metadata_handler("doc", lambda var: "v1.0")
-parser.register_metadata_handler("kb", lambda var: "Esta es una cita importante de la base de conocimiento." if var == "cita1" else "")
+# Contenido del documento KMC | KMC document content
+documento_markdown = """
+# Proyecto: [[project:nombre]]
+Tipo: [[project:tipo]]
+Versión del Documento: [{doc:version}]
+Autor: [[user:nombre]]
 
-# Registrar handler para variables generativas con LlamaIndex | Register handler for generative variables with LlamaIndex
-llamaindex_handler = LlamaIndexHandler(index=my_index)
-parser.register_generative_handler("ai:gpt4", llamaindex_handler)
+## Resumen Ejecutivo
+<!-- KMC_DEFINITION FOR [{doc:resumen_ejecutivo}]:
+GENERATIVE_SOURCE = {{ai:gpt4:generar_resumen}}
+PROMPT = "Crear un resumen ejecutivo para el proyecto [[project:nombre]] sobre [[project:tipo]]."
+-->
+[{doc:resumen_ejecutivo}]
 
-# Renderizar un documento | Render a document
-documento = """
-# [[project:nombre]]
-Versión: [{doc:version}]
-
-## Resumen
-{{ai:gpt4:resumen}}
-<!-- AI_PROMPT FOR {{ai:gpt4:resumen}}: 
-Genera un resumen conciso del proyecto a partir de [{kb:cita1}].
+## Tareas Pendientes
+{{ai:gpt4:listar_tareas}}
+<!-- AI_PROMPT FOR {{ai:gpt4:listar_tareas}}:
+Listar tareas pendientes para un proyecto de [[project:tipo]].
 -->
 
-<!-- KMC_DEFINITION FOR [{doc:conclusion}]:
-GENERATIVE_SOURCE = {{ai:gpt4:conclusion}}
-PROMPT = "Genera una conclusión para el proyecto basada en [{kb:cita1}]"
-FORMAT = "markdown"
--->
-
-## Conclusión
-[{doc:conclusion}]
+Este documento fue generado por [[user:nombre]].
 """
 
-resultado = parser.render(documento)
-print(resultado)
+# El parser registrará automáticamente los handlers necesarios
+stats = parser.auto_register_handlers(markdown_content=documento_markdown)
+
+# También puedes proporcionar handlers personalizados
+custom_handlers = {
+    "context": {
+        "project": lambda var_name: {
+            "nombre": "Proyecto KMC Expandible",
+            "tipo": "Arquitectura de SDK"
+        }.get(var_name, f"<project:{var_name}>"),
+        "user": lambda var_name: "Usuario Principal" if var_name == "nombre" else f"<user:{var_name}>"
+    }
+}
+
+# Procesar el documento
+resultado_renderizado = parser.process_document(
+    markdown_content=documento_markdown, 
+    default_handlers=custom_handlers
+)
+print(resultado_renderizado)
 ```
+
+### Uso avanzado con handlers y plugins | Advanced usage with handlers and plugins
+
+```python
+from kmc_parser import KMCParser, registry, ContextHandler, plugin_manager
+
+# Creando un handler personalizado
+class ProjectHandler(ContextHandler):
+    def __init__(self, config=None):
+        super().__init__(config)
+        self.project_data = self.config.get("project_data", {
+            "nombre": "Proyecto KMC",
+            "tipo": "SDK para procesamiento de documentos",
+            "estado": "En desarrollo"
+        })
+    
+    def _get_context_value(self, var_name):
+        return self.project_data.get(var_name, f"<project:{var_name}>")
+
+# Registrando el handler en el registro central
+registry.register_context_handler("project", ProjectHandler())
+
+# El parser utilizará automáticamente los handlers registrados
+parser = KMCParser()
+resultado = parser.process_document(markdown_content=documento_markdown)
+```
+
+## Extendiendo KMC | Extending KMC
+
+La arquitectura expandible de KMC facilita la creación de extensiones:
+*The expandable architecture of KMC facilitates creating extensions:*
+
+1. **Crear un handler personalizado | Create a custom handler**
+```python
+from kmc_parser import ContextHandler, context_handler
+
+@context_handler("cliente")
+class ClienteHandler(ContextHandler):
+    """Handler para variables contextuales de cliente [[cliente:nombre]]"""
+    
+    def _get_context_value(self, var_name):
+        # Implementar lógica para obtener datos del cliente
+        return f"Valor para cliente:{var_name}"
+```
+
+2. **Crear un plugin completo | Create a complete plugin**
+```python
+from kmc_parser import KMCPlugin, registry
+from kmc_parser.handlers.base import GenerativeHandler
+
+class ApiWeatherHandler(GenerativeHandler):
+    def _generate_content(self, var):
+        # Implementación para obtener datos del clima
+        return f"Datos del clima para: {var.prompt}"
+
+class WeatherPlugin(KMCPlugin):
+    def initialize(self):
+        self.register_handlers()
+        return True
+    
+    def register_handlers(self):
+        weather_handler = ApiWeatherHandler()
+        registry.register_generative_handler("api:weather", weather_handler)
+        return 1
+```
+
+Para más ejemplos de extensión de KMC, consulte la carpeta `examples/expansible_architecture/`.
+*For more examples of extending KMC, check the `examples/expansible_architecture/` folder.*
 
 ## Documentación | Documentation
 
@@ -197,12 +307,10 @@ El directorio `examples/` contiene varios ejemplos de uso:
   *Integration with existing infrastructure*
 - `frontend_integration.py`: Integración con el frontend  
   *Integration with the frontend*
-- `quick_start/`: Ejemplos básicos para empezar a usar KMC:  
-  *Basic examples to start using KMC:*
-  - `kmc_example.py`: Ejemplo básico de uso programático  
-    *Basic example of programmatic usage*
-  - `markdown_kmc.md`: Plantilla de ejemplo usando la sintaxis KMC  
-    *Example template using KMC syntax*
+- `quick_start/`: Ejemplos básicos para empezar a usar KMC  
+  *Basic examples to start using KMC*
+- `expansible_architecture/`: Ejemplos de uso de la nueva arquitectura expandible  
+  *Examples of using the new expandable architecture*
 
 ## Flujo de trabajo y arquitectura | Workflow and Architecture
 
@@ -229,30 +337,47 @@ KMC está diseñado para proporcionar un flujo de trabajo claro y modular para d
    Responsable: [[user:nombre]] ([[user:email]])
    ```
 
-2. **Declarar los handlers e integraciones en Python**  
-   *Declare handlers and integrations in Python*
+2. **Preparar el KMC Parser y definir handlers personalizados (opcional)**  
+   *Set up the KMC Parser and define custom handlers (optional)*
    ```python
    from kmc_parser import KMCParser
 
    parser = KMCParser()
 
-   # Registrar handlers | Register handlers
-   parser.register_context_handler("project", lambda var: {
-       "nombre": "Proyecto Demo",
-       "tipo": "Análisis de mercado"
-   }.get(var, f"<project:{var}>") )
+   # Opcional: Define handlers personalizados si necesitas un comportamiento específico.
+   # Si no, el parser usará handlers genéricos (placeholders).
+   # Optional: Define custom handlers if you need specific behavior.
+   # Otherwise, the parser will use generic (placeholder) handlers.
+   custom_handlers = {
+       "context": {
+           "project": lambda var_name: {
+               "nombre": "Proyecto Demo Workflow",
+               "tipo": "Análisis de Mercado Avanzado"
+           }.get(var_name, f"<project:{var_name}>"),
+           "user": lambda var_name: "Giorgio" if var_name == "nombre" else \
+                                 "giorgio@reevolutiva.com" if var_name == "email" else f"<user:{var_name}>"
+       },
+       "generative": {
+           "ai:gpt4": lambda var: f"[Contenido AI para '{var.name}' con prompt: '{var.prompt}']"
+       }
+       # Añade otros handlers para 'metadata' o más tipos si es necesario
+   }
    ```
 
 3. **Procesar la plantilla**  
    *Process the template*
    ```python
    with open("plantilla.md", "r", encoding="utf-8") as f:
-       contenido = f.read()
+       contenido_markdown = f.read()
 
-   resultado = parser.render(contenido)
-   print(resultado)
+   # Procesa el documento. Los handlers se registran automáticamente.
+   # Process the document. Handlers are registered automatically.
+   resultado_renderizado = parser.process_document(
+       markdown_content=contenido_markdown,
+       default_handlers=custom_handlers # Pasa tus handlers personalizados aquí
+   )
+   print(resultado_renderizado)
    ```
-
 ## Reutilización de variables y métodos por proyecto | Reuse of Variables and Methods by Project
 
 El SDK de KMC permite a los desarrolladores gestionar variables y métodos de manera centralizada:  
@@ -312,3 +437,14 @@ El SDK de KMC permite a los desarrolladores gestionar variables y métodos de ma
     *Optimization of the cascade variable resolution process.*
   - Nueva sintaxis KMC_DEFINITION para definiciones declarativas de variables.  
     *New KMC_DEFINITION syntax for declarative variable definitions.*
+  
+- **07/05/2025**: Implementación de la arquitectura expandible:
+  *Implementation of the expandable architecture:*
+  - Nuevo sistema de registro centralizado (`registry.py`).
+    *New centralized registry system (`registry.py`).*
+  - Jerarquía de handlers base para diferentes tipos de variables.
+    *Base handler hierarchy for different variable types.*
+  - Sistema de plugins para extender la funcionalidad.
+    *Plugin system to extend functionality.*
+  - Integración de la arquitectura expandible con el parser existente.
+    *Integration of the expandable architecture with the existing parser.*
