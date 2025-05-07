@@ -28,11 +28,14 @@ class LlamaIndexQuery(GenerativeHandler):
     __kmc_var_type__ = "tool:llamaindex"
     
     def _generate_content(self, var):
+        
+        prompt = var.prompt or "desconocida"
+    
         llamaindex_middleware = LlamaIndexMiddleware()
+        
         # Procesar el prompt asociado a la variable
-        if hasattr(var, 'prompt') and var.prompt:
-            return llamaindex_middleware.agent_query(var.prompt)
-        return "Prompt no proporcionado"
+        return llamaindex_middleware.llm_query(prompt)
+      
 
 class LlamaIndexGenerativeHandler(KMCPlugin):
     """

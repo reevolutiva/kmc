@@ -5,28 +5,47 @@ import re
 from typing import Dict, List, Any, Callable, Optional, Union
 import logging
 from importlib import import_module
+import os
 
 from .models import ContextualVariable, MetadataVariable, GenerativeVariable, KMCDocument, KMCVariableDefinition
 # Importar el sistema de registro centralizado
 from .core import registry
+from .extensions.auto_discovery import ExtensionDiscovery
 
 
 class KMCParser:
     """Parser principal para documentos KMC"""
     
-    def __init__(self):
-        """Inicializa el parser KMC"""
+    def __init__(self, auto_discover=True, ext_directory=None):
+        """
+        Inicializa el parser KMC
+
+        Args:
+            auto_discover: Si debe descubrir automáticamente extensiones
+            ext_directory: Directorio adicional donde buscar extensiones
+        """
         self.context_handlers: Dict[str, Callable] = {}
         self.metadata_handlers: Dict[str, Callable] = {}
         self.generative_handlers: Dict[str, Callable] = {}
         self.variable_definitions: Dict[str, KMCVariableDefinition] = {}
         self.logger = logging.getLogger("kmc.parser")
         
+        # Cargar extensiones automáticamente si está habilitado
+        if auto_discover:
+            self._auto_discover_extensions(ext_directory)
+
         # Intentar cargar plugins por defecto si existen
         try:
             self._load_default_plugins()
         except Exception as e:
             self.logger.debug(f"No se pudieron cargar plugins por defecto: {str(e)}")
+    
+    def _auto_discover_extensions(self, ext_directory=None):
+        """Descubre y carga automáticamente extensiones del SDK"""
+        discovery = ExtensionDiscovery()
+        base_path = ext_directory or os.path.dirname(__file__)
+        stats = discovery.discover_all_extensions(base_path=base_path)
+        self.logger.info(f"Extensiones descubiertas: {stats}")
     
     def _load_default_plugins(self):
         """

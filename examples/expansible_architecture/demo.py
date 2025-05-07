@@ -371,13 +371,13 @@ def ejemplo_plugin_llamaindex():
     markdown = """
     # Consulta LlamaIndex
     ## Pregunta
-    <!-- KMC_DEFINITION FOR [{tool:llamaindex}]:
+    <!-- KMC_DEFINITION FOR [{tool:llamaindexquery}]:
     GENERATIVE_SOURCE = {{tool:llamaindex}}
-    PROMPT = "Extrae el título principal del módulo basándote en [{kb:contenido}]"
+    PROMPT = "Hola ¿Que hace?"
     FORMAT = "text/plain; max_length=80"
     --> 
     ## Respuesta
-    [{tool:llamaindex}]
+    [{tool:llamaindexquery}]
     """
         
     resultado = parser.process_document(markdown_content=markdown)
