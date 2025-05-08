@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kmc-parser"
+version = "0.1.0"
+description = "A parser for KMC." # You can update this
+readme = "README.md" # Assuming you have a README.md
+# Add other metadata like authors, license, classifiers, dependencies etc.
+# For example:
+# authors = [
+#   { name="Your Name", email="you@example.com" },
+# ]
+# license = { text="MIT" }
+# classifiers = [
+#    "Programming Language :: Python :: 3",
+#    "License :: OSI Approved :: MIT License",
+#    "Operating System :: OS Independent",
+# ]
+# dependencies = [
+#    "dependency1",
+#    "dependency2>=1.0",
+# ]
+
+[tool.setuptools]
+# If your package is inside a 'src' directory, uncomment the following:
+# package-dir = {"" = "src"}
+# packages = ["kmc_parser"] # Or find packages automatically
+# Or, if your packages are directly in the root:
+packages = ["kmc_parser"] # Adjust if your main package has a different name or location
+
+# For editable installs, setuptools usually infers correctly.
+# If you encounter issues, you might need to specify:
+# [tool.setuptools.editable]
+# mode = "strict"
