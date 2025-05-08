@@ -5,32 +5,43 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kmc-parser"
 version = "0.1.0"
-description = "A parser for KMC." # You can update this
-readme = "README.md" # Assuming you have a README.md
-# Add other metadata like authors, license, classifiers, dependencies etc.
-# For example:
-# authors = [
-#   { name="Your Name", email="you@example.com" },
-# ]
-# license = { text="MIT" }
-# classifiers = [
-#    "Programming Language :: Python :: 3",
-#    "License :: OSI Approved :: MIT License",
-#    "Operating System :: OS Independent",
-# ]
-# dependencies = [
-#    "dependency1",
-#    "dependency2>=1.0",
-# ]
+description = "Kimfe Markdown Convention Parser - Un parser para plantillas inteligentes con LLMs"
+authors = [
+    {name = "Kimfe Team", email = "info@kimfe.com"}
+]
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
+keywords = ["markdown", "llm", "template", "ai", "kimfe"]
+dependencies = [
+    "regex>=2022.1.18",
+    "llama-index>=0.8.0",
+]
+
+[project.urls]
+Homepage = "https://kimfe.com"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=22.1.0",
+    "isort>=5.10.1", 
+    "mypy>=0.941",
+]
+langchain = [
+    "langchain>=0.0.200",
+]
+crewai = [
+    "crewai>=0.1.0",
+]
 
 [tool.setuptools]
-# If your package is inside a 'src' directory, uncomment the following:
-# package-dir = {"" = "src"}
-# packages = ["kmc_parser"] # Or find packages automatically
-# Or, if your packages are directly in the root:
-packages = ["kmc_parser"] # Adjust if your main package has a different name or location
-
-# For editable installs, setuptools usually infers correctly.
-# If you encounter issues, you might need to specify:
-# [tool.setuptools.editable]
-# mode = "strict"
+packages = ["kmc_parser"]

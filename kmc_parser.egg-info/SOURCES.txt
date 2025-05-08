@@ -1,6 +1,6 @@
 LICENSE
 README.md
-setup.py
+pyproject.toml
 kmc_parser/__init__.py
 kmc_parser/models.py
 kmc_parser/parser.py
