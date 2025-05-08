@@ -9,34 +9,42 @@ from kmc_parser import KMCParser
 # Definir rutas
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), 'markdown_kmc.md')
 
-# Inicializar parser
-parser = KMCParser()
+# Definir handlers personalizados
+# Estos handlers se utilizarán para resolver las variables en la plantilla
+custom_handlers = {
+    "context": {
+        "project": lambda var_name: {
+            "nombre": "Proyecto Demo",
+            "fecha_inicio": "2025-05-07",
+            "estado": "En desarrollo"
+        }.get(var_name, f"<project:{var_name}>"),
+        
+        "org": lambda var_name: {
+            "nombre_empresa": "Reevolutiva S.A.S."
+        }.get(var_name, f"<org:{var_name}>"),
+        
+        "user": lambda var_name: {
+            "nombre": "Giorgio La Pietra"
+        }.get(var_name, f"<user:{var_name}>")
+    },
+    
+    "metadata": {
+        "doc": lambda var_name: {
+            "version": "v2.0"
+        }.get(var_name, f"<doc:{var_name}>")
+    },
+    
+    "generative": {
+        "ai:gpt4": lambda var: process_ai_variable(var),
+        "ai:dalle": lambda var: process_image_variable(var)
+    }
+}
 
-# Registrar handlers de ejemplo para las variables contextuales
-parser.register_context_handler("project", lambda var: {
-    "nombre": "Proyecto Demo",
-    "fecha_inicio": "2025-05-07",
-    "estado": "En desarrollo"
-}.get(var, f"<project:{var}>"))
-
-parser.register_context_handler("org", lambda var: {
-    "nombre_empresa": "Reevolutiva S.A.S."
-}.get(var, f"<org:{var}>"))
-
-parser.register_context_handler("user", lambda var: {
-    "nombre": "Giorgio La Pietra"
-}.get(var, f"<user:{var}>"))
-
-# Registrar handlers para las variables de metadata
-parser.register_metadata_handler("doc", lambda var: {
-    "version": "v2.0"
-}.get(var, f"<doc:{var}>"))
-
-# Registrar handlers para las variables generativas
-def ai_handler(var):
+# Función auxiliar para procesar variables de IA
+def process_ai_variable(var):
     """
     Handler para las variables generativas de tipo AI que procesa 
-    la nueva sintaxis KMC_DEFINITION
+    la sintaxis KMC_DEFINITION
     """
     if var.name == "extract_summary":
         return "Este proyecto tiene como objetivo desarrollar una plataforma integrada para la gestión de documentos dinámicos con IA."
@@ -51,22 +59,31 @@ def ai_handler(var):
     else:
         return f"<Contenido generado para {var.name}>"
 
-# Registrar el handler para variables generativas de tipo AI
-parser.register_generative_handler("ai:gpt4", ai_handler)
+# Función auxiliar para procesar variables de imágenes
+def process_image_variable(var):
+    """Handler para variables generativas de imágenes"""
+    return "[Imagen generada por AI: " + var.prompt + "]"
+
+# Inicializar parser con auto-descubrimiento de extensiones habilitado
+parser = KMCParser()
 
 # Leer plantilla
 with open(TEMPLATE_PATH, 'r', encoding='utf-8') as f:
     plantilla = f.read()
 
-# Procesar plantilla
-resultado = parser.render(plantilla)
+# Procesar plantilla en un solo paso usando el método process_document
+# Este método combina auto_register_handlers y render en una sola operación
+resultado = parser.process_document(
+    markdown_content=plantilla,
+    default_handlers=custom_handlers
+)
 
 # Mostrar resultado
 print("\n--- PLANTILLA PROCESADA CON KMC ---\n")
 print(resultado)
 print("\n--- FIN DE LA PLANTILLA ---\n")
 
-print("Note que esta plantilla utiliza la nueva sintaxis KMC_DEFINITION, que permite:")
+print("Note que esta plantilla utiliza la sintaxis KMC_DEFINITION, que permite:")
 print("- Definir variables de metadata vinculadas a fuentes generativas")
 print("- Especificar instrucciones claras para generación de contenido")
 print("- Definir formatos de salida específicos")

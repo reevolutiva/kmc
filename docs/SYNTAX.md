@@ -61,6 +61,7 @@ Represent specific information about the document or related content, such as re
 | `doc` | Metadata del documento | Document metadata | `[{doc:version}]`, `[{doc:autor}]` |
 | `kb` | Base de conocimiento | Knowledge base | `[{kb:cita_1}]`, `[{kb:referencia}]` |
 | `ref` | Referencias cruzadas | Cross-references | `[{ref:tabla_1}]`, `[{ref:seccion_2}]` |
+| `image` | Referencias a imágenes | Image references | `[{image:diagrama}]`, `[{image:logo}]` |
 
 ### 1.3 Variables Generativas | Generative Variables `{{categoria:subtipo:nombre}}`
 
@@ -115,6 +116,27 @@ Tipos de instrucciones comunes | Common instruction types:
 | `TOOL_CONFIG` | Configuración para herramientas | Configuration for tools | `<!-- TOOL_CONFIG FOR {{tool:ocr:texto}}: idioma=es -->` |
 | `CALC_FORMULA` | Fórmulas para cálculos | Formulas for calculations | `<!-- CALC_FORMULA: (valor1 + valor2) / 2 -->` |
 
+### 2.2 Definición de Prompts para Variables de IA | Prompt Definition for AI Variables
+
+_Español_
+
+Los prompts para variables generativas de IA se definen usando la estructura `AI_PROMPT`:
+
+_English_
+
+Prompts for AI generative variables are defined using the `AI_PROMPT` structure:
+
+```markdown
+<!-- AI_PROMPT FOR {{ai:gpt4:resumen}}:
+Genera un resumen de este proyecto basándote en la información contextual.
+Incluye:
+- Alcance del proyecto
+- Objetivos principales
+- Tecnologías utilizadas
+Extensión: máximo 200 palabras.
+-->
+```
+
 ### 2.3 Definiciones Integradas de Variables (KMC_DEFINITION) | Integrated Variable Definitions
 
 _Español_
@@ -122,6 +144,37 @@ _Español_
 Esta sintaxis es fundamental para KMC y establece una regla clara: para que una variable de metadata (ej. `[{doc:mi_variable}]`) sea renderizada con contenido generado, **debe existir como un placeholder en el cuerpo del documento Y además tener un bloque `KMC_DEFINITION` asociado.**
 
 El bloque `KMC_DEFINITION FOR [{doc:mi_variable}]` no inserta contenido directamente en su propia ubicación. En su lugar, define cómo se generará el contenido para todas las instancias del placeholder `[{doc:mi_variable}]` que se encuentren en el documento. Esta definición es global para el documento una vez declarada y puede ser capturada por el SDK para su reutilización.
+
+#### Estructura de KMC_DEFINITION | KMC_DEFINITION Structure
+
+```markdown
+<!-- KMC_DEFINITION FOR [{tipo:nombre}]:
+GENERATIVE_SOURCE = {{categoria:subtipo:nombre}}
+PROMPT = "Instrucciones para generar el contenido"
+FORMAT = "formato/tipo; parámetros_adicionales"
+-->
+```
+
+Donde | Where:
+
+- `[{tipo:nombre}]` es la variable de metadata que se va a definir | is the metadata variable to be defined
+- `{{categoria:subtipo:nombre}}` es la variable generativa que proporcionará el contenido | is the generative variable that will provide the content
+- `PROMPT` contiene las instrucciones para generar el contenido | contains instructions to generate content
+- `FORMAT` (opcional) especifica el formato deseado para la salida | (optional) specifies the desired output format
+
+#### Ejemplo Completo | Complete Example
+
+```markdown
+<!-- KMC_DEFINITION FOR [{doc:objetivos_de_aprendizaje}]:
+GENERATIVE_SOURCE = {{ai:gpt4:extract_objectives}}
+PROMPT = "Extrae un listado de objetivos y resultados de aprendizaje a partir de [{kb:contenido}]. Se definen tantos RA y OA como sean necesarios para cubrir los objetivos de aprendizaje"
+FORMAT = "markdown; bullet_list"
+-->
+
+## Objetivos y Resultados de Aprendizaje
+
+[{doc:objetivos_de_aprendizaje}]
+```
 
 #### Reglas de Renderizado | Rendering Rules
 
@@ -131,21 +184,42 @@ El bloque `KMC_DEFINITION FOR [{doc:mi_variable}]` no inserta contenido directam
 
 Esta distinción es importante porque separa claramente las declaraciones de variables (placeholders donde aparecerá el contenido) de las fuentes que generan dicho contenido.
 
-Ejemplo de uso:
-```markdown
-[{doc:objetivos_de_aprendizaje}]
-<!-- KMC_DEFINITION FOR [{doc:objetivos_de_aprendizaje}]:
-GENERATIVE_SOURCE = {{ai:gpt4:extract_title}}
-PROMPT = "Extrae un listado de objetivos y resultados de aprendizaje a partir de  [{kb:contenido}]. Se definen tantos RA y OA como sean necesarios para cubrir los objetivos de aprendizaje"
-FORMAT = "Listado en formato RA1: Resultado de aprendizaje 1, OA1.1 Objetivo de aprendizaje 1 asociado RA1, OA1.2 Objetivo de aprendizaje 2 asociado RA1, "
--->
-```
-
 _English_
 
 This syntax is fundamental to KMC and establishes a clear rule: for a metadata variable (e.g., `[{doc:my_variable}]`) to be rendered with generated content, **it must exist as a placeholder in the document body AND also have an associated `KMC_DEFINITION` block.**
 
 The `KMC_DEFINITION FOR [{doc:my_variable}]` block does not directly insert content at its own location. Instead, it defines how content will be generated for all instances of the `[{doc:my_variable}]` placeholder found within the document. This definition is global for the document once declared and can be captured by the SDK for reuse.
+
+#### KMC_DEFINITION Structure
+
+```markdown
+<!-- KMC_DEFINITION FOR [{type:name}]:
+GENERATIVE_SOURCE = {{category:subtype:name}}
+PROMPT = "Instructions to generate the content"
+FORMAT = "format/type; additional_parameters"
+-->
+```
+
+Where:
+
+- `[{type:name}]` is the metadata variable to be defined
+- `{{category:subtype:name}}` is the generative variable that will provide the content
+- `PROMPT` contains instructions to generate content
+- `FORMAT` (optional) specifies the desired output format
+
+#### Complete Example
+
+```markdown
+<!-- KMC_DEFINITION FOR [{doc:learning_objectives}]:
+GENERATIVE_SOURCE = {{ai:gpt4:extract_objectives}}
+PROMPT = "Extract a list of learning objectives and outcomes from [{kb:content}]. Define as many LOs and LOs as needed to cover the learning objectives"
+FORMAT = "markdown; bullet_list"
+-->
+
+## Learning Objectives and Outcomes
+
+[{doc:learning_objectives}]
+```
 
 #### Rendering Rules
 
@@ -155,14 +229,190 @@ The `KMC_DEFINITION FOR [{doc:my_variable}]` block does not directly insert cont
 
 This distinction is important because it clearly separates variable declarations (placeholders where content will appear) from the sources that generate that content.
 
-Usage example:
+## 3. Encadenamiento de Variables | Variable Chaining
+
+_Español_
+
+KMC permite encadenar variables para crear flujos de trabajo complejos donde el resultado de una variable sirve como entrada para otra.
+
+_English_
+
+KMC allows chaining variables to create complex workflows where the result of one variable serves as input for another.
+
+### 3.1 Uso de Variables en Prompts | Using Variables in Prompts
+
+_Español_
+
+Se pueden referenciar otras variables dentro de los prompts:
+
+_English_
+
+Other variables can be referenced within prompts:
+
 ```markdown
-[{doc:learning_objectives}]
-<!-- KMC_DEFINITION FOR [{doc:learning_objectives}]:
-GENERATIVE_SOURCE = {{ai:gpt4:extract_title}}
-PROMPT = "Extract a list of learning objectives and outcomes from [{kb:content}]. Define as many LOs and LOs as needed to cover the learning objectives"
-FORMAT = "List in format LO1: Learning outcome 1, OBJ1.1 Learning objective 1 associated with LO1, OBJ1.2 Learning objective 2 associated with LO1, "
+<!-- KMC_DEFINITION FOR [{doc:recomendaciones}]:
+GENERATIVE_SOURCE = {{ai:gpt4:generate_recommendations}}
+PROMPT = "Basándote en el análisis [{doc:analisis_datos}], genera recomendaciones específicas para el proyecto [[project:nombre]]."
+FORMAT = "markdown; bullet_list"
 -->
+
+## Recomendaciones
+[{doc:recomendaciones}]
+```
+
+### 3.2 Dependencias entre Variables | Dependencies between Variables
+
+_Español_
+
+Al encadenar variables, se establece un orden implícito de resolución:
+
+_English_
+
+When chaining variables, an implicit resolution order is established:
+
+```markdown
+<!-- KMC_DEFINITION FOR [{doc:analisis_datos}]:
+GENERATIVE_SOURCE = {{ai:gpt4:analyze_data}}
+PROMPT = "Analiza los siguientes datos del proyecto: [[project:datos_clave]]"
+-->
+
+<!-- KMC_DEFINITION FOR [{doc:recomendaciones}]:
+GENERATIVE_SOURCE = {{ai:gpt4:generate_recommendations}}
+PROMPT = "Basándote en el análisis [{doc:analisis_datos}], genera recomendaciones."
+-->
+```
+
+En este ejemplo, `[{doc:analisis_datos}]` debe resolverse antes que `[{doc:recomendaciones}]` porque la segunda depende de la primera.
+
+In this example, `[{doc:analisis_datos}]` must be resolved before `[{doc:recomendaciones}]` because the second depends on the first.
+
+## 4. Formatos de Salida | Output Formats
+
+_Español_
+
+El atributo `FORMAT` en las definiciones KMC_DEFINITION permite especificar el formato deseado para la salida.
+
+_English_
+
+The `FORMAT` attribute in KMC_DEFINITION allows specifying the desired output format.
+
+### 4.1 Sintaxis de Formato | Format Syntax
+
+```
+FORMAT = "tipo/subtipo; parámetro1=valor1; parámetro2=valor2"
+```
+
+### 4.2 Formatos Comunes | Common Formats
+
+| Formato | Descripción | Description | Ejemplo | Example |
+|---------|-------------|-------------|---------|---------|
+| `text/plain` | Texto sin formato | Plain text | `FORMAT = "text/plain; max_length=100"` |
+| `markdown` | Contenido Markdown | Markdown content | `FORMAT = "markdown; bullet_list"` |
+| `json` | Estructura JSON | JSON structure | `FORMAT = "json; schema=schema1"` |
+| `html` | Contenido HTML | HTML content | `FORMAT = "html; clean=true"` |
+| `image/png` | Imagen PNG | PNG image | `FORMAT = "image/png; width=800; height=600"` |
+
+### 4.3 Ejemplos de Uso | Usage Examples
+
+```markdown
+<!-- KMC_DEFINITION FOR [{doc:tabla_datos}]:
+GENERATIVE_SOURCE = {{ai:gpt4:extract_data}}
+PROMPT = "Extrae los datos principales del proyecto en formato tabular"
+FORMAT = "markdown; table; headers=true"
+-->
+```
+
+```markdown
+<!-- KMC_DEFINITION FOR [{image:diagrama_flujo}]:
+GENERATIVE_SOURCE = {{ai:dalle:generation}}
+PROMPT = "Un diagrama de flujo para el proceso [[project:proceso_principal]]"
+FORMAT = "image/png; width=1024; height=768; style=technical_diagram"
+-->
+```
+
+## 5. Integración con Sistemas Externos | Integration with External Systems
+
+_Español_
+
+KMC está diseñado para integrarse con diversos sistemas externos, como LlamaIndex, APIs y otras fuentes de datos.
+
+_English_
+
+KMC is designed to integrate with various external systems, such as LlamaIndex, APIs, and other data sources.
+
+### 5.1 Integración con LlamaIndex | LlamaIndex Integration
+
+```markdown
+<!-- KMC_DEFINITION FOR [{kb:respuesta_técnica}]:
+GENERATIVE_SOURCE = {{mcp:llamaindex:query}}
+PROMPT = "¿Cómo funciona el mecanismo de cache en el proyecto [[project:nombre]]?"
+FORMAT = "markdown; max_tokens=500"
+-->
+
+## Detalles Técnicos
+[{kb:respuesta_técnica}]
+```
+
+### 5.2 Integración con APIs | API Integration
+
+```markdown
+<!-- KMC_DEFINITION FOR [{doc:datos_mercado}]:
+GENERATIVE_SOURCE = {{api:finance:market_data}}
+PROMPT = "Obtener datos de mercado para [[org:sector]] en el último trimestre"
+FORMAT = "markdown; table"
+-->
+
+## Análisis de Mercado
+[{doc:datos_mercado}]
+```
+
+## 6. Interoperabilidad | Interoperability
+
+_Español_
+
+KMC se puede utilizar en diferentes contextos, desde documentos Markdown estáticos hasta aplicaciones web dinámicas.
+
+_English_
+
+KMC can be used in different contexts, from static Markdown documents to dynamic web applications.
+
+### 6.1 Uso en Documentos Estáticos | Use in Static Documents
+
+```markdown
+# Informe de Proyecto: [[project:nombre]]
+
+## Resumen Ejecutivo
+[{doc:resumen_ejecutivo}]
+
+## Análisis de Datos
+[{doc:analisis_datos}]
+```
+
+### 6.2 Integración en Aplicaciones Web | Integration in Web Applications
+
+```python
+from kmc_parser import KMCParser
+from flask import Flask, render_template_string
+
+app = Flask(__name__)
+
+@app.route('/project/<project_id>')
+def project_report(project_id):
+    # Cargar plantilla KMC
+    with open('templates/report_template.md', 'r') as f:
+        template = f.read()
+    
+    # Configurar parser con datos específicos del proyecto
+    parser = KMCParser()
+    parser.register_context_handler("project", lambda var: get_project_data(project_id, var))
+    
+    # Renderizar la plantilla
+    rendered_content = parser.process_document(markdown_content=template)
+    
+    # Convertir Markdown a HTML para la web
+    html_content = convert_markdown_to_html(rendered_content)
+    
+    return render_template_string(html_content)
 ```
 
 ## 7. Mejores Prácticas | Best Practices
@@ -196,3 +446,113 @@ FORMAT = "List in format LO1: Learning outcome 1, OBJ1.1 Learning objective 1 as
    - Define variables comunes al inicio del documento | Define common variables at the beginning of the document
    - Reutiliza las mismas variables para contenido similar | Reuse the same variables for similar content
    - Aprovecha la capacidad del SDK para capturar definiciones | Take advantage of the SDK's ability to capture definitions
+
+7. **Optimización del Flujo de Trabajo | Workflow Optimization:**
+   - Organiza las definiciones para minimizar dependencias circulares | Organize definitions to minimize circular dependencies
+   - Separa claramente el contenido estático del dinámico | Clearly separate static and dynamic content
+   - Considera el rendimiento al encadenar múltiples variables generativas | Consider performance when chaining multiple generative variables
+
+8. **Compatibilidad con Markdown Estándar | Compatibility with Standard Markdown:**
+   - Asegúrate de que el documento siga siendo válido como Markdown | Ensure the document remains valid as Markdown
+   - Proporciona valores por defecto para variables críticas | Provide default values for critical variables
+   - Verifica el renderizado en diferentes visores de Markdown | Verify rendering in different Markdown viewers
+
+## 8. Depuración y Solución de Problemas | Debugging and Troubleshooting
+
+_Español_
+
+Consejos para identificar y resolver problemas comunes al trabajar con KMC:
+
+_English_
+
+Tips for identifying and resolving common issues when working with KMC:
+
+### 8.1 Verificación de Variables | Variable Verification
+
+Para depurar problemas con variables no resueltas:
+
+To debug issues with unresolved variables:
+
+```python
+from kmc_parser import KMCParser
+
+parser = KMCParser(debug=True)  # Activar modo de depuración
+doc = parser.parse(markdown_content)
+
+# Listar todas las variables encontradas
+for var_type, vars_list in doc.all_variables.items():
+    print(f"Variables de tipo {var_type}:")
+    for var in vars_list:
+        print(f"  - {var.fullname}")
+
+# Verificar definiciones de variables
+for var_key, definition in parser.variable_definitions.items():
+    print(f"Definición para {var_key}:")
+    print(f"  - Fuente generativa: {definition.generative_var}")
+    print(f"  - Prompt: {definition.prompt}")
+    print(f"  - Formato: {definition.format}")
+```
+
+### 8.2 Problemas Comunes y Soluciones | Common Issues and Solutions
+
+| Problema | Problem | Solución | Solution |
+|----------|---------|----------|----------|
+| Variable no se renderiza | Variable not rendering | Verificar que existe su definición KMC_DEFINITION | Verify that its KMC_DEFINITION exists |
+| Error en handler | Handler error | Revisar los logs del handler específico | Check logs for the specific handler |
+| Dependencias circulares | Circular dependencies | Reorganizar definiciones para romper el ciclo | Reorganize definitions to break the cycle |
+| Formato de salida incorrecto | Incorrect output format | Verificar la especificación FORMAT | Verify the FORMAT specification |
+
+## 9. Compatibilidad y Extensiones | Compatibility and Extensions
+
+_Español_
+
+KMC está diseñado para ser extensible y compatible con diversas herramientas y frameworks.
+
+_English_
+
+KMC is designed to be extensible and compatible with various tools and frameworks.
+
+### 9.1 Extensiones Disponibles | Available Extensions
+
+| Extensión | Extension | Descripción | Description | Uso | Usage |
+|-----------|-----------|-------------|-------------|-----|-------|
+| llamaindex | LlamaIndex integration | Integración con LlamaIndex | Integration with LlamaIndex | Búsqueda semántica y acceso a bases de conocimiento | Semantic search and knowledge base access |
+| crewai | CrewAI integration | Integración con CrewAI | Integration with CrewAI | Orquestación de agentes | Agent orchestration |
+| itscop | ITSCOP integration | Integración con ITSCOP | Integration with ITSCOP | Gestión de procesos IT | IT process management |
+
+### 9.2 Creación de Nuevas Extensiones | Creating New Extensions
+
+Los desarrolladores pueden extender KMC implementando nuevos handlers y plugins:
+
+Developers can extend KMC by implementing new handlers and plugins:
+
+```python
+from kmc_parser import KMCPlugin, registry
+from kmc_parser.handlers.base import GenerativeHandler
+
+class MiHandlerGenerativo(GenerativeHandler):
+    def _generate_content(self, var):
+        # Implementación personalizada para generar contenido
+        return f"Contenido generado para {var.name} basado en prompt: {var.prompt}"
+
+class MiPlugin(KMCPlugin):
+    def initialize(self):
+        # Registrar handlers personalizados
+        registry.register_generative_handler("mi_categoria:mi_subtipo", MiHandlerGenerativo())
+        return True
+```
+
+## 10. Referencias | References
+
+_Español_
+
+Recursos adicionales y documentación relacionada con KMC:
+
+_English_
+
+Additional resources and documentation related to KMC:
+
+- [Repositorio de KMC](https://github.com/reevolutiva/kmc) - Código fuente y documentación
+- [Ejemplos de implementación](https://github.com/reevolutiva/kmc/tree/main/examples) - Ejemplos prácticos de uso
+- [Documentación de la API](https://reevolutiva.github.io/kmc/) - Referencia completa de la API de KMC
+- [Guía de desarrollo](https://github.com/reevolutiva/kmc/tree/main/docs) - Recursos para desarrolladores que quieran extender KMC

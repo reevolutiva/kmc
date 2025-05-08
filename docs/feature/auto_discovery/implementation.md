@@ -184,40 +184,262 @@ class ClienteHandler(ContextHandler):
         return f"Valor para cliente:{var_name}"
 ```
 
-## Plan de Implementación
+# Tutorial: Creación de Extensiones Autodetectables en KMC
 
-### Fase 1: Implementación Base
-1. Crear la clase `ExtensionDiscovery` en `kmc_parser/extensions/auto_discovery.py`
-2. Implementar las funciones de escaneo y registro
+Versión: 1.0
+Fecha: 2025-05-07
 
-### Fase 2: Integración con KMCParser
-1. Actualizar el constructor de `KMCParser` para usar autodetección
-2. Crear el método unificado `process_document`
-3. Mantener los métodos existentes por compatibilidad
+Este tutorial te guiará a través del proceso de creación de tus propias extensiones (handlers y plugins) que pueden ser descubiertas y cargadas automáticamente por el KMC Parser.
 
-### Fase 3: Estructura de Directorios
-1. Crear los directorios estándar en el paquete KMC
-2. Añadir README.md en cada directorio con instrucciones
+## Prerrequisitos
 
-### Fase 4: Documentación y Ejemplos
-1. Actualizar el README.md principal con la nueva funcionalidad
-2. Crear ejemplos prácticos en `examples/expansible_architecture/`
-3. Actualizar la documentación existente
+*   Comprensión básica de Python y Clases.
+*   KMC Parser instalado en tu entorno.
+*   Familiaridad con la [Sintaxis KMC](../SYNTAX.md) y los [Conceptos de Autodetección](./auto_discovery.md).
 
-## Pruebas
+## Parte 1: Creación de un Handler Contextual Autodetectable
 
-Se deben crear pruebas para:
-- Verificar que los handlers se detectan y registran correctamente
-- Comprobar que los plugins se cargan adecuadamente
-- Validar la compatibilidad con código existente
-- Probar el funcionamiento con directorios personalizados
+Los Handlers Contextuales resuelven variables del tipo `[[tipo:nombre_variable]]`.
 
-## Consideraciones y Limitaciones
+**Objetivo:** Crear un handler que resuelva `[[custom_user:nombre]]` y `[[custom_user:rol]]`.
 
-- La autodetección podría aumentar ligeramente el tiempo de inicialización
-- Se debe proporcionar un mecanismo para deshabilitar la autodetección si es necesario
-- Los handlers y plugins autodescubiertos deben seguir una estructura específica
+1.  **Crea el archivo del Handler:**
+    *   Dentro de tu proyecto, localiza o crea uno de los directorios de autodetección. Para este ejemplo, usaremos `user_extensions/`.
+    *   Crea un nuevo archivo Python, por ejemplo: `user_extensions/my_custom_user_handler.py`.
 
-## Conclusiones
+2.  **Escribe el Código del Handler:**
 
-La implementación de autodetección de extensiones facilitará significativamente el proceso de extensión de KMC, permitiendo a los desarrolladores concentrarse en implementar su lógica específica sin preocuparse por la integración manual con el parser. Esta característica está alineada con la filosofía de KMC de ser un sistema modular, extensible y fácil de usar.
+    ```python
+    # /ruta/a/tu/proyecto/user_extensions/my_custom_user_handler.py
+    
+    from kmc_parser.handlers.base import ContextHandler, context_handler
+    
+    @context_handler("custom_user") # Este decorador es clave para la autodetección
+    class MyCustomUserHandler(ContextHandler):
+        """Handler personalizado para obtener información del usuario."""
+    
+        def _get_context_value(self, var_name: str):
+            """Resuelve el valor de la variable contextual."""
+            if var_name == "nombre":
+                return "Usuario Ejemplo"
+            elif var_name == "rol":
+                return "Desarrollador KMC"
+            return None # Importante devolver None si la variable no se reconoce
+    
+    # No necesitas registrar nada manualmente aquí. 
+    # El decorador @context_handler("custom_user") y la ubicación del archivo
+    # en 'user_extensions/' son suficientes para que KMC lo encuentre.
+    ```
+
+3.  **Prueba tu Handler:**
+    *   Crea un archivo Markdown de prueba (ej. `test.md`):
+        ```markdown
+        # Información del Usuario Personalizado
+        
+        Nombre: [[custom_user:nombre]]
+        Rol: [[custom_user:rol]]
+        Otro: [[custom_user:inexistente]] 
+        ```
+    *   Crea un script Python para procesarlo:
+        ```python
+        from kmc_parser import KMCParser
+        import os
+        
+        # Asegúrate de que KMCParser pueda encontrar tu directorio de extensiones.
+        # Si ejecutas este script desde la raíz de tu proyecto donde está 'user_extensions/',
+        # KMC debería encontrarlo automáticamente.
+        # Si no, podrías necesitar ajustar el PYTHONPATH o usar KMCParser(ext_directories=["ruta/a/user_extensions"])
+        
+        parser = KMCParser() # La autodetección está habilitada por defecto
+        
+        template_content = """
+        # Información del Usuario Personalizado
+        
+        Nombre: [[custom_user:nombre]]
+        Rol: [[custom_user:rol]]
+        Otro: [[custom_user:inexistente]]
+        """
+        
+        resultado = parser.process_document(template_content)
+        print(resultado)
+        ```
+    *   Ejecuta el script. La salida esperada es:
+        ```markdown
+        # Información del Usuario Personalizado
+        
+        Nombre: Usuario Ejemplo
+        Rol: Desarrollador KMC
+        Otro: 
+        ```
+        (Nota: `[[custom_user:inexistente]]` se resuelve a una cadena vacía porque devolvimos `None`)
+
+**¡Felicidades!** Has creado tu primer handler contextual autodetectable.
+
+## Parte 2: Creación de un Handler Generativo Autodetectable
+
+Los Handlers Generativos resuelven variables del tipo `{{categoria:subtipo:nombre_variable}}` y usualmente interactúan con sistemas externos o lógica compleja para generar contenido.
+
+**Objetivo:** Crear un handler que simule una llamada a una API para `{{sim_api:weather:city_temperature}}`.
+
+1.  **Crea el archivo del Handler:**
+    *   Puedes usar el mismo directorio `user_extensions/` o, si prefieres, `custom_handlers/`.
+    *   Crea un nuevo archivo Python, por ejemplo: `custom_handlers/simulated_api_handler.py`.
+
+2.  **Escribe el Código del Handler:**
+
+    ```python
+    # /ruta/a/tu/proyecto/custom_handlers/simulated_api_handler.py
+    
+    from kmc_parser.handlers.base import GenerativeHandler, generative_handler
+    from kmc_parser.models import GenerativeVariable # Necesario para type hinting
+    
+    @generative_handler("sim_api:weather") # Clave para autodetección
+    class SimulatedWeatherApiHandler(GenerativeHandler):
+        """Handler para simular llamadas a una API del clima."""
+    
+        def _generate_content(self, var: GenerativeVariable):
+            """Genera contenido basado en la variable generativa."""
+            # var.name sería 'city_temperature' en {{sim_api:weather:city_temperature}}
+            # var.prompt contendría el prompt de KMC_DEFINITION si se usa.
+            # Para este ejemplo simple, asumimos que el nombre de la variable es la ciudad.
+            
+            city = var.name # Asumimos que el nombre de la variable es la ciudad para este ejemplo
+            # En un caso real, el prompt o los parámetros de la variable serían más útiles.
+            
+            if city == "london_temp":
+                return "15°C"
+            elif city == "newyork_temp":
+                return "22°C"
+            else:
+                return f"Temperatura no disponible para {city}"
+    ```
+
+3.  **Prueba tu Handler:**
+    *   Actualiza tu archivo Markdown de prueba (`test.md`) o crea uno nuevo:
+        ```markdown
+        # Clima Simulado
+        
+        Temperatura en Londres: {{sim_api:weather:london_temp}}
+        Temperatura en Nueva York: {{sim_api:weather:newyork_temp}}
+        Temperatura en París: {{sim_api:weather:paris_temp}}
+        ```
+    *   Usa un script Python similar al anterior:
+        ```python
+        from kmc_parser import KMCParser
+        
+        parser = KMCParser()
+        
+        template_content = """
+        # Clima Simulado
+        
+        Temperatura en Londres: {{sim_api:weather:london_temp}}
+        Temperatura en Nueva York: {{sim_api:weather:newyork_temp}}
+        Temperatura en París: {{sim_api:weather:paris_temp}}
+        """
+        
+        resultado = parser.process_document(template_content)
+        print(resultado)
+        ```
+    *   Ejecuta el script. La salida esperada es:
+        ```markdown
+        # Clima Simulado
+        
+        Temperatura en Londres: 15°C
+        Temperatura en Nueva York: 22°C
+        Temperatura en París: Temperatura no disponible para paris_temp
+        ```
+
+## Parte 3: Creación de un Plugin Autodetectable
+
+Los Plugins (`KMCPlugin`) son útiles para agrupar múltiples handlers, realizar configuraciones iniciales o registrar varios componentes a la vez.
+
+**Objetivo:** Crear un plugin que registre un handler contextual para `[[my_plugin_info:version]]`.
+
+1.  **Crea el archivo del Plugin:**
+    *   Los plugins suelen ir en el directorio `plugins/`.
+    *   Crea un nuevo archivo Python, por ejemplo: `plugins/my_info_plugin.py`.
+
+2.  **Escribe el Código del Plugin y su Handler:**
+
+    ```python
+    # /ruta/a/tu/proyecto/plugins/my_info_plugin.py
+    
+    from kmc_parser.extensions.plugin_base import KMCPlugin
+    from kmc_parser.core import registry # Necesario para registrar handlers desde el plugin
+    from kmc_parser.handlers.base import ContextHandler 
+    # No necesitas el decorador @context_handler aquí si registras desde el plugin
+    
+    # Primero, definimos el handler que el plugin registrará
+    class PluginInfoHandler(ContextHandler):
+        def _get_context_value(self, var_name: str):
+            if var_name == "version":
+                return "MyPlugin v1.0.0"
+            return None
+    
+    # Ahora, definimos el Plugin
+    # KMC buscará clases que hereden de KMCPlugin en esta carpeta.
+    class MyInfoPlugin(KMCPlugin):
+        """Un plugin de ejemplo que registra un handler de información."""
+        
+        def initialize(self):
+            """Se llama cuando el plugin se carga. Aquí registramos nuestros handlers."""
+            plugin_handler = PluginInfoHandler()
+            # Usamos el registry directamente para registrar el handler
+            registry.register_context_handler("my_plugin_info", plugin_handler)
+            self.logger.info("MyInfoPlugin inicializado y handler registrado.") # Es buena práctica loguear
+            return True # Es importante devolver True si la inicialización fue exitosa
+        
+        def cleanup(self):
+            """Se llama si el plugin necesita liberar recursos (opcional)."""
+            self.logger.info("MyInfoPlugin limpiado.")
+            # Aquí podrías des-registrar el handler si fuera necesario, 
+            # aunque no es común para la mayoría de los plugins.
+    ```
+
+3.  **Prueba tu Plugin:**
+    *   Actualiza tu archivo Markdown de prueba (`test.md`):
+        ```markdown
+        # Información del Plugin
+        
+        Versión del Plugin: [[my_plugin_info:version]]
+        ```
+    *   Usa un script Python similar:
+        ```python
+        from kmc_parser import KMCParser
+        
+        # KMCParser descubrirá y cargará automáticamente MyInfoPlugin desde la carpeta 'plugins/'
+        # y su método initialize() registrará el handler.
+        parser = KMCParser()
+        
+        template_content = """
+        # Información del Plugin
+        
+        Versión del Plugin: [[my_plugin_info:version]]
+        """
+        
+        resultado = parser.process_document(template_content)
+        print(resultado)
+        ```
+    *   Ejecuta el script. La salida esperada es:
+        ```markdown
+        # Información del Plugin
+        
+        Versión del Plugin: MyPlugin v1.0.0
+        ```
+        También deberías ver los mensajes de log de `MyInfoPlugin` en la consola si la configuración de logging de KMC lo permite.
+
+## Conclusión
+
+Has aprendido a crear diferentes tipos de extensiones autodetectables para KMC:
+
+*   **Handlers Contextuales:** Usando el decorador `@context_handler` y colocando el archivo en un directorio de extensión.
+*   **Handlers Generativos:** Usando el decorador `@generative_handler` de manera similar.
+*   **Plugins:** Creando una clase que hereda de `KMCPlugin`, implementando `initialize()` para registrar handlers u otra lógica, y colocando el archivo en el directorio `plugins/`.
+
+La clave para la autodetección es:
+
+1.  **Ubicación del Archivo:** Colocar tus archivos Python en los directorios correctos (`extensions/`, `user_extensions/`, `custom_handlers/`, `plugins/`).
+2.  **Decoradores (para Handlers):** Usar `@context_handler`, `@metadata_handler`, o `@generative_handler` para que KMC reconozca y registre tus handlers automáticamente cuando el módulo es importado.
+3.  **Herencia (para Plugins):** Heredar de `KMCPlugin` para que KMC reconozca tu clase como un plugin.
+
+Este sistema te permite mantener tu código de aplicación principal limpio y extender KMC de una manera modular y organizada.
