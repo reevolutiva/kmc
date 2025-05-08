@@ -448,3 +448,64 @@ El SDK de KMC permite a los desarrolladores gestionar variables y métodos de ma
     *Plugin system to extend functionality.*
   - Integración de la arquitectura expandible con el parser existente.
     *Integration of the expandable architecture with the existing parser.*
+
+## Autodetección de Extensiones | Extension Autodetection
+
+A partir de la versión más reciente, KMC ahora incluye una capacidad de autodetección de extensiones, lo que permite a los desarrolladores simplemente colocar sus archivos de extensión en directorios específicos sin necesidad de modificar manualmente el código base o registrar explícitamente cada handler o plugin.
+
+*As of the latest version, KMC now includes an extension autodetection capability, allowing developers to simply place their extension files in specific directories without needing to manually modify the base code or explicitly register each handler or plugin.*
+
+### Componentes Principales de la Solución | Main Solution Components
+
+#### 1. Sistema de Descubrimiento de Extensiones (`ExtensionDiscovery`)
+
+Se ha creado un componente central responsable de:
+- Escanear directorios predefinidos en busca de extensiones
+- Detectar clases que implementen las interfaces de handlers o plugins
+- Registrar automáticamente los handlers y plugins encontrados
+- Proporcionar información sobre las extensiones cargadas
+
+Ubicación: `kmc_parser/extensions/auto_discovery.py`
+
+#### 2. Directorios Estandarizados
+
+Se han definido varios directorios estándar para diferentes tipos de extensiones:
+- `extensions/`: Extensiones propias del SDK
+- `user_extensions/`: Extensiones creadas por usuarios
+- `custom_handlers/`: Handlers personalizados
+- `plugins/`: Plugins adicionales
+
+#### 3. Integración con KMCParser
+
+Se ha modificado la clase `KMCParser` para:
+- Incluir una opción de autodetección en el constructor
+- Unificar los métodos `auto_register_handlers` y `render` en un solo método `process_document`
+- Mantener compatibilidad con el código existente
+
+### Ejemplos de Uso | Usage Examples
+
+#### Ejemplo Simple con Autodetección | Simple Example with Autodetection
+
+```python
+from kmc_parser import KMCParser
+
+# Las extensiones se detectan automáticamente
+parser = KMCParser()
+
+# Procesar el documento en un solo paso
+resultado = parser.process_document(markdown_path="plantilla.md")
+print(resultado)
+```
+
+#### Ejemplo con un Directorio de Extensiones Personalizado | Example with a Custom Extensions Directory
+
+```python
+from kmc_parser import KMCParser
+
+# Especificar un directorio adicional para extensiones
+parser = KMCParser(ext_directory="/ruta/a/mis/extensiones")
+
+# Procesar el documento
+resultado = parser.process_document(markdown_path="plantilla.md")
+print(resultado)
+```
