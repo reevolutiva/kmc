@@ -1,9 +1,12 @@
 # KMC - Kimfe Markdown Convention
-_Última actualización: 7 de mayo de 2025 | Last update: May 7, 2025_
+_Última actualización: 8 de mayo de 2025 | Last update: May 8, 2025_
 
 KMC es una convención de Markdown aumentado para crear plantillas inteligentes que se integran con sistemas de LLM, bases de conocimiento y APIs.
 
 *KMC is an augmented Markdown convention for creating smart templates that integrate with LLM systems, knowledge bases, and APIs.*
+
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
 
 ## Estado actual | Current Status
 
@@ -19,6 +22,21 @@ KMC se encuentra en desarrollo activo y cuenta con los siguientes componentes:
 - **Integraciones**: Disponibles en `kmc_parser/integrations/` *(Integrations: Available in `kmc_parser/integrations/`)*
 - **Documentación**: README.md principal y guía de sintaxis en `docs/SYNTAX.md` *(Documentation: Main README.md and syntax guide in `docs/SYNTAX.md`)*
 - **Ejemplos de uso**: Varios ejemplos en la carpeta `examples/` *(Usage examples: Various examples in the `examples/` folder)*
+
+## Instalación | Installation
+
+```bash
+# Instalación desde PyPI (cuando esté disponible)
+pip install kmc-parser
+
+# Instalación directa desde el repositorio
+pip install git+https://github.com/reevolutiva/kmc-parser.git
+
+# Instalación para desarrollo
+git clone https://github.com/reevolutiva/kmc-parser.git
+cd kmc-parser
+pip install -e ".[dev]"
+```
 
 ## Visión general | Overview
 
@@ -54,6 +72,43 @@ Este enfoque unificado permite crear plantillas dinámicas, interactivas y adapt
   *Integrated variable definitions - declarative syntax that relates metadata variables with generative sources*
 - **Reglas de renderizado claras** - variables con `[]` se renderizan una vez procesadas, variables con `{}` nunca se renderizan directamente  
   *Clear rendering rules - variables with `[]` are rendered once processed, variables with `{}` are never rendered directly*
+
+## Inicio Rápido | Quick Start
+
+```python
+from kmc_parser import KMCParser
+
+# Inicializar el parser
+parser = KMCParser()
+
+# Registrar un handler para variables contextuales
+parser.register_context_handler("project", lambda var: {
+    "nombre": "Proyecto Demo",
+    "fecha": "2025-05-08" 
+}.get(var, f"<project:{var}>"))
+
+# Registrar un handler para variables generativas
+def ai_handler(var):
+    if var.name == "generar_titulo":
+        return "Título Generado con IA"
+    return "Contenido por defecto"
+
+parser.register_generative_handler("ai:gpt4", ai_handler)
+
+# Cargar y procesar un documento KMC
+with open("plantilla.md", "r") as f:
+    content = f.read()
+
+# Procesar el documento
+result = parser.process(content)
+
+# Imprimir el resultado
+print(result)
+```
+
+Consulta más ejemplos en la carpeta [`examples/`](examples/).
+
+*Check out more examples in the [`examples/`](examples/) folder.*
 
 ## Arquitectura | Architecture
 
@@ -454,6 +509,51 @@ El SDK de KMC permite a los desarrolladores gestionar variables y métodos de ma
 KMC ahora incluye una funcionalidad para generar plantillas Markdown dinámicas basadas en prompts proporcionados por el usuario. Esta característica permite a los desarrolladores crear documentos que cumplen con el estándar KMC de manera eficiente y precisa.
 
 *KMC now includes a functionality to generate dynamic Markdown templates based on prompts provided by the user. This feature allows developers to create documents that comply with the KMC standard efficiently and accurately.*
+
+## Documentación | Documentation
+
+- [Guía de Sintaxis KMC](docs/SYNTAX.md) | [KMC Syntax Guide](docs/SYNTAX.md)
+- [Guía de Contribución](CONTRIBUTING.md) | [Contribution Guide](CONTRIBUTING.md)
+- [Código de Conducta](CODE_OF_CONDUCT.md) | [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Guía de Pruebas](docs/TESTING.md) | [Testing Guide](docs/TESTING.md)
+
+## Contribuciones | Contributing
+
+¡Agradecemos tus contribuciones! Por favor lee nuestra [Guía de Contribución](CONTRIBUTING.md) para más información sobre cómo participar en este proyecto.
+
+*We appreciate your contributions! Please read our [Contributing Guide](CONTRIBUTING.md) for more information on how to participate in this project.*
+
+## Pruebas | Testing
+
+Para ejecutar las pruebas:
+
+```bash
+# Instalar dependencias de desarrollo
+pip install -e ".[dev]"
+
+# Ejecutar las pruebas
+pytest
+```
+
+Para más información sobre pruebas, consulta nuestra [Guía de Pruebas](docs/TESTING.md).
+
+*For more information about testing, check our [Testing Guide](docs/TESTING.md).*
+
+## Licencia | License
+
+Este proyecto está licenciado bajo la [Licencia Apache 2.0](LICENSE).
+
+*This project is licensed under the [Apache License 2.0](LICENSE).*
+
+## Contacto | Contact
+
+- **Sitio Web**: [kimfe.com](https://kimfe.com)
+- **Email**: info@kimfe.com
+- **Creado por**: Equipo Kimfe / Reevolutiva S.A.S.
+
+---
+
+**KMC - 2025 © Reevolutiva S.A.S. - Todos los derechos reservados | All rights reserved**
 
 ### Características Principales | Key Features
 
