@@ -18,13 +18,13 @@ markdown = """
 ### [[project:descripcion]]
 
 
-<!-- KMC_DEFINITION FOR [{tool:llamaindex}]:
+<!-- KMC_DEFINITION FOR [{tool:tempalte_maker}]:
     GENERATIVE_SOURCE = {{tool:tempalte_maker}}
     PROMPT = "NOMBRE:PROJECTO;DESCRIPCION:DESCRIPCION;OBJETIVO:OBJETIVO;INSTUCCIONES:INSTUCCIONES"
     FORMAT = "text/plain; max_length=80"
 --> 
 
-[{tool:llamaindex}]
+[{tool:tempalte_maker}]
 
 """
 

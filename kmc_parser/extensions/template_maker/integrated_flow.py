@@ -50,7 +50,7 @@ class KMC_Parser_TemplateMaker():
         }
             
         registry.register_context_handler("project", ProjectHandler(config=project_config))
-        registry.register_metadata_handler("doc", DocumentMetadataHandler(config=doc_config))
+        #registry.register_metadata_handler("doc", DocumentMetadataHandler(config=doc_config))
 
         
         resultado = parser.process_document(markdown_content=markdown)
