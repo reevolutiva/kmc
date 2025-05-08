@@ -80,15 +80,69 @@ class ExtensionDiscovery:
         Returns:
             Diccionario con estadísticas de los elementos descubiertos
         """
-        # Implementación...
-        
+        base_path = base_path or os.getcwd()
+        stats = {"handlers": 0, "plugins": 0}
+
+        for directory in self.EXTENSION_DIRECTORIES:
+            full_path = os.path.join(base_path, directory)
+            if os.path.exists(full_path):
+                stats["handlers"] += self._scan_directory_for_handlers(full_path)
+                stats["plugins"] += self._scan_directory_for_plugins(full_path)
+
+        return stats
+    
     def _scan_directory_for_handlers(self, directory):
         """Busca y registra handlers en un directorio"""
-        # Implementación...
-        
+        self.logger.info(f"Escaneando handlers en: {directory}")
+        handler_count = 0
+
+        for root, _, files in os.walk(directory):
+            for file in files:
+                if file.endswith(".py"):
+                    module_name = os.path.splitext(file)[0]
+                    module_path = os.path.join(root, file)
+                    spec = importlib.util.spec_from_file_location(module_name, module_path)
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+
+                    for attr_name in dir(module):
+                        attr = getattr(module, attr_name)
+                        if hasattr(attr, "__kmc_handler_type__") and hasattr(attr, "__kmc_var_type__"):
+                            handler_type = getattr(attr, "__kmc_handler_type__")
+                            var_type = getattr(attr, "__kmc_var_type__")
+
+                            if handler_type == "context":
+                                self.discovered_handlers.add((handler_type, var_type, attr))
+                            elif handler_type == "metadata":
+                                self.discovered_handlers.add((handler_type, var_type, attr))
+                            elif handler_type == "generative":
+                                self.discovered_handlers.add((handler_type, var_type, attr))
+
+                            handler_count += 1
+
+        return handler_count
+    
     def _scan_directory_for_plugins(self, directory):
         """Busca y registra plugins en un directorio"""
-        # Implementación...
+        self.logger.info(f"Escaneando plugins en: {directory}")
+        plugin_count = 0
+
+        for root, _, files in os.walk(directory):
+            for file in files:
+                if file.endswith(".py"):
+                    module_name = os.path.splitext(file)[0]
+                    module_path = os.path.join(root, file)
+                    spec = importlib.util.spec_from_file_location(module_name, module_path)
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+
+                    for attr_name in dir(module):
+                        attr = getattr(module, attr_name)
+                        if isinstance(attr, type) and issubclass(attr, KMCPlugin) and attr is not KMCPlugin:
+                            self.discovered_plugins.add(attr)
+                            plugin_count += 1
+
+        return plugin_count
 ```
 
 ### Actualización de KMCParser
@@ -114,7 +168,24 @@ class KMCParser:
     
     def _auto_discover_extensions(self, ext_directory=None):
         """Descubre y carga automáticamente extensiones del SDK"""
-        # Implementación...
+        discovery = ExtensionDiscovery()
+        base_path = ext_directory or os.path.dirname(__file__)
+        stats = discovery.discover_all_extensions(base_path=base_path)
+        self.logger.info(f"Extensiones descubiertas: {stats}")
+        
+        # Registrar handlers descubiertos
+        for handler_type, var_type, handler in discovery.discovered_handlers:
+            if handler_type == "context":
+                self.context_handlers[var_type] = handler()
+            elif handler_type == "metadata":
+                self.metadata_handlers[var_type] = handler()
+            elif handler_type == "generative":
+                self.generative_handlers[f"{var_type}"] = handler()
+        
+        # Registrar plugins descubiertos
+        for plugin_cls in discovery.discovered_plugins:
+            plugin_instance = plugin_cls()
+            plugin_instance.initialize()
     
     def process_document(self, markdown_path=None, markdown_content=None, default_handlers=None):
         """
@@ -129,16 +200,119 @@ class KMCParser:
         Returns:
             Documento renderizado con todas las variables resueltas
         """
-        # Implementación...
+        if markdown_path is None and markdown_content is None:
+            raise ValueError("Debe proporcionar markdown_path o markdown_content")
+            
+        # Cargar contenido del markdown
+        if markdown_path:
+            with open(markdown_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+        else:
+            content = markdown_content
+            
+        # Registrar handlers automáticamente
+        self.auto_register_handlers(markdown_content=content, default_handlers=default_handlers)
+        
+        # Renderizar el documento
+        return self.render(content)
     
     # Mantener los métodos existentes por compatibilidad
     def auto_register_handlers(self, markdown_path=None, markdown_content=None, default_handlers=None):
         """
         OBSOLETO: Use process_document en su lugar.
         Este método se mantiene por compatibilidad.
-        Se debe implementar una notificación para que el desarrollador deje de usarlo
         """
-        # Implementación...
+        if markdown_path is None and markdown_content is None:
+            raise ValueError("Debe proporcionar markdown_path o markdown_content")
+            
+        # Cargar contenido del markdown
+        if markdown_path:
+            with open(markdown_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+        else:
+            content = markdown_content
+            
+        # Configurar handlers predeterminados
+        default_handlers = default_handlers or {
+            "context": {},
+            "metadata": {},
+            "generative": {}
+        }
+        
+        # Analizar el documento para identificar todas las variables
+        doc = self.parse(content)
+        
+        # Estadísticas para el retorno
+        stats = {
+            "context": {},
+            "metadata": {},
+            "generative": {}
+        }
+        
+        # Procesar variables contextuales
+        for var in doc.contextual_vars:
+            var_type = var.type
+            
+            # Si hay un handler predefinido para este tipo, lo usamos
+            if var_type in default_handlers["context"]:
+                self.context_handlers[var_type] = default_handlers["context"][var_type]
+            elif var_type not in self.context_handlers: # Solo registrar si no existe ya uno
+                # Primero, intentar obtener del registro centralizado
+                registry_handler = registry.get_context_handler(var_type)
+                if registry_handler:
+                    self.context_handlers[var_type] = registry_handler
+                else:
+                    # Crear un handler genérico que devuelve un placeholder
+                    self.context_handlers[var_type] = lambda var_name, vt=var_type: f"<{vt}:{var_name}>"
+                
+            # Registrar en estadísticas
+            if var_type not in stats["context"]:
+                stats["context"][var_type] = 0
+            stats["context"][var_type] += 1
+            
+        # Procesar variables de metadata
+        for var in doc.metadata_vars:
+            var_type = var.type
+            
+            # Si hay un handler predefinido para este tipo, lo usamos
+            if var_type in default_handlers["metadata"]:
+                self.metadata_handlers[var_type] = default_handlers["metadata"][var_type]
+            elif var_type not in self.metadata_handlers:
+                # Primero, intentar obtener del registro centralizado
+                registry_handler = registry.get_metadata_handler(var_type)
+                if registry_handler:
+                    self.metadata_handlers[var_type] = registry_handler
+                else:
+                    # Crear un handler genérico que devuelve un placeholder
+                    self.metadata_handlers[var_type] = lambda var_name, vt=var_type: f"<{vt}:{var_name}>"
+                
+            # Registrar en estadísticas
+            if var_type not in stats["metadata"]:
+                stats["metadata"][var_type] = 0
+            stats["metadata"][var_type] += 1
+            
+        # Procesar variables generativas
+        for var in doc.generative_vars:
+            handler_key = var.handler_key
+            
+            # Si hay un handler predefinido para este tipo, lo usamos
+            if handler_key in default_handlers["generative"]:
+                self.generative_handlers[handler_key] = default_handlers["generative"][handler_key]
+            elif handler_key not in self.generative_handlers:
+                # Primero, intentar obtener del registro centralizado
+                registry_handler = registry.get_generative_handler(handler_key)
+                if registry_handler:
+                    self.generative_handlers[handler_key] = registry_handler
+                else:
+                    # Crear un handler genérico que genera un texto de placeholder
+                    self.generative_handlers[handler_key] = lambda var_obj: f"<Contenido generativo para {var_obj.category}:{var_obj.subtype}:{var_obj.name}>"
+                
+            # Registrar en estadísticas
+            if handler_key not in stats["generative"]:
+                stats["generative"][handler_key] = 0
+            stats["generative"][handler_key] += 1
+            
+        return stats
 ```
 
 ## Ejemplos de Uso
@@ -308,15 +482,69 @@ class ExtensionDiscovery:
         Returns:
             Dictionary with statistics of discovered elements
         """
-        # Implementation...
+        base_path = base_path or os.getcwd()
+        stats = {"handlers": 0, "plugins": 0}
+
+        for directory in self.EXTENSION_DIRECTORIES:
+            full_path = os.path.join(base_path, directory)
+            if os.path.exists(full_path):
+                stats["handlers"] += self._scan_directory_for_handlers(full_path)
+                stats["plugins"] += self._scan_directory_for_plugins(full_path)
+
+        return stats
         
     def _scan_directory_for_handlers(self, directory):
         """Searches for and registers handlers in a directory"""
-        # Implementation...
+        self.logger.info(f"Scanning handlers in: {directory}")
+        handler_count = 0
+
+        for root, _, files in os.walk(directory):
+            for file in files:
+                if file.endswith(".py"):
+                    module_name = os.path.splitext(file)[0]
+                    module_path = os.path.join(root, file)
+                    spec = importlib.util.spec_from_file_location(module_name, module_path)
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+
+                    for attr_name in dir(module):
+                        attr = getattr(module, attr_name)
+                        if hasattr(attr, "__kmc_handler_type__") and hasattr(attr, "__kmc_var_type__"):
+                            handler_type = getattr(attr, "__kmc_handler_type__")
+                            var_type = getattr(attr, "__kmc_var_type__")
+
+                            if handler_type == "context":
+                                self.discovered_handlers.add((handler_type, var_type, attr))
+                            elif handler_type == "metadata":
+                                self.discovered_handlers.add((handler_type, var_type, attr))
+                            elif handler_type == "generative":
+                                self.discovered_handlers.add((handler_type, var_type, attr))
+
+                            handler_count += 1
+
+        return handler_count
         
     def _scan_directory_for_plugins(self, directory):
         """Searches for and registers plugins in a directory"""
-        # Implementation...
+        self.logger.info(f"Scanning plugins in: {directory}")
+        plugin_count = 0
+
+        for root, _, files in os.walk(directory):
+            for file in files:
+                if file.endswith(".py"):
+                    module_name = os.path.splitext(file)[0]
+                    module_path = os.path.join(root, file)
+                    spec = importlib.util.spec_from_file_location(module_name, module_path)
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+
+                    for attr_name in dir(module):
+                        attr = getattr(module, attr_name)
+                        if isinstance(attr, type) and issubclass(attr, KMCPlugin) and attr is not KMCPlugin:
+                            self.discovered_plugins.add(attr)
+                            plugin_count += 1
+
+        return plugin_count
 ```
 
 ### KMCParser Update
@@ -342,7 +570,24 @@ class KMCParser:
     
     def _auto_discover_extensions(self, ext_directory=None):
         """Discovers and automatically loads SDK extensions"""
-        # Implementation...
+        discovery = ExtensionDiscovery()
+        base_path = ext_directory or os.path.dirname(__file__)
+        stats = discovery.discover_all_extensions(base_path=base_path)
+        self.logger.info(f"Discovered extensions: {stats}")
+        
+        # Register discovered handlers
+        for handler_type, var_type, handler in discovery.discovered_handlers:
+            if handler_type == "context":
+                self.context_handlers[var_type] = handler()
+            elif handler_type == "metadata":
+                self.metadata_handlers[var_type] = handler()
+            elif handler_type == "generative":
+                self.generative_handlers[f"{var_type}"] = handler()
+        
+        # Register discovered plugins
+        for plugin_cls in discovery.discovered_plugins:
+            plugin_instance = plugin_cls()
+            plugin_instance.initialize()
     
     def process_document(self, markdown_path=None, markdown_content=None, default_handlers=None):
         """
@@ -357,7 +602,21 @@ class KMCParser:
         Returns:
             Rendered document with all variables resolved
         """
-        # Implementation...
+        if markdown_path is None and markdown_content is None:
+            raise ValueError("Must provide markdown_path or markdown_content")
+            
+        # Load markdown content
+        if markdown_path:
+            with open(markdown_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+        else:
+            content = markdown_content
+            
+        # Automatically register handlers
+        self.auto_register_handlers(markdown_content=content, default_handlers=default_handlers)
+        
+        # Render the document
+        return self.render(content)
     
     # Keep existing methods for compatibility
     def auto_register_handlers(self, markdown_path=None, markdown_content=None, default_handlers=None):
@@ -365,7 +624,97 @@ class KMCParser:
         DEPRECATED: Use process_document instead.
         This method is maintained for compatibility.
         """
-        # Implementation...
+        if markdown_path is None and markdown_content is None:
+            raise ValueError("Must provide markdown_path or markdown_content")
+            
+        # Load markdown content
+        if markdown_path:
+            with open(markdown_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+        else:
+            content = markdown_content
+            
+        # Configure default handlers
+        default_handlers = default_handlers or {
+            "context": {},
+            "metadata": {},
+            "generative": {}
+        }
+        
+        # Parse the document to identify all variables
+        doc = self.parse(content)
+        
+        # Statistics for return
+        stats = {
+            "context": {},
+            "metadata": {},
+            "generative": {}
+        }
+        
+        # Process contextual variables
+        for var in doc.contextual_vars:
+            var_type = var.type
+            
+            # If there is a predefined handler for this type, use it
+            if var_type in default_handlers["context"]:
+                self.context_handlers[var_type] = default_handlers["context"][var_type]
+            elif var_type not in self.context_handlers: # Only register if one does not already exist
+                # First, try to get from the centralized registry
+                registry_handler = registry.get_context_handler(var_type)
+                if registry_handler:
+                    self.context_handlers[var_type] = registry_handler
+                else:
+                    # Create a generic handler that returns a placeholder
+                    self.context_handlers[var_type] = lambda var_name, vt=var_type: f"<{vt}:{var_name}>"
+                
+            # Register in statistics
+            if var_type not in stats["context"]:
+                stats["context"][var_type] = 0
+            stats["context"][var_type] += 1
+            
+        # Process metadata variables
+        for var in doc.metadata_vars:
+            var_type = var.type
+            
+            # If there is a predefined handler for this type, use it
+            if var_type in default_handlers["metadata"]:
+                self.metadata_handlers[var_type] = default_handlers["metadata"][var_type]
+            elif var_type not in self.metadata_handlers:
+                # First, try to get from the centralized registry
+                registry_handler = registry.get_metadata_handler(var_type)
+                if registry_handler:
+                    self.metadata_handlers[var_type] = registry_handler
+                else:
+                    # Create a generic handler that returns a placeholder
+                    self.metadata_handlers[var_type] = lambda var_name, vt=var_type: f"<{vt}:{var_name}>"
+                
+            # Register in statistics
+            if var_type not in stats["metadata"]:
+                stats["metadata"][var_type] = 0
+            stats["metadata"][var_type] += 1
+            
+        # Process generative variables
+        for var in doc.generative_vars:
+            handler_key = var.handler_key
+            
+            # If there is a predefined handler for this type, use it
+            if handler_key in default_handlers["generative"]:
+                self.generative_handlers[handler_key] = default_handlers["generative"][handler_key]
+            elif handler_key not in self.generative_handlers:
+                # First, try to get from the centralized registry
+                registry_handler = registry.get_generative_handler(handler_key)
+                if registry_handler:
+                    self.generative_handlers[handler_key] = registry_handler
+                else:
+                    # Create a generic handler that generates a placeholder text
+                    self.generative_handlers[handler_key] = lambda var_obj: f"<Generative content for {var_obj.category}:{var_obj.subtype}:{var_obj.name}>"
+                
+            # Register in statistics
+            if handler_key not in stats["generative"]:
+                stats["generative"][handler_key] = 0
+            stats["generative"][handler_key] += 1
+            
+        return stats
 ```
 
 ## Usage Examples

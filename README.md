@@ -448,3 +448,14 @@ El SDK de KMC permite a los desarrolladores gestionar variables y métodos de ma
     *Plugin system to extend functionality.*
   - Integración de la arquitectura expandible con el parser existente.
     *Integration of the expandable architecture with the existing parser.*
+
+- **08/05/2025**: Implementación de autodetección de extensiones:
+  *Implementation of extension autodetection:*
+  - Nuevo sistema de descubrimiento de extensiones (`ExtensionDiscovery`).
+    *New extension discovery system (`ExtensionDiscovery`).*
+  - Métodos `_scan_directory_for_handlers` y `_scan_directory_for_plugins` implementados.
+    *Implemented `_scan_directory_for_handlers` and `_scan_directory_for_plugins` methods.*
+  - Integración completa con `KMCParser` para autodetección de extensiones.
+    *Full integration with `KMCParser` for extension autodetection.*
+  - Documentación y ejemplos actualizados para reflejar la autodetección completa.
+    *Documentation and examples updated to reflect complete autodetection.*

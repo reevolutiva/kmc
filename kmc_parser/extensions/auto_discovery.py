@@ -1,5 +1,6 @@
 import os
 import logging
+import importlib.util
 
 class ExtensionDiscovery:
     """Descubre y carga automáticamente extensiones del SDK KMC"""
@@ -42,11 +43,52 @@ class ExtensionDiscovery:
     def _scan_directory_for_handlers(self, directory):
         """Busca y registra handlers en un directorio"""
         self.logger.info(f"Escaneando handlers en: {directory}")
-        # Implementación futura para registrar handlers
-        return 0
+        handler_count = 0
+
+        for root, _, files in os.walk(directory):
+            for file in files:
+                if file.endswith(".py"):
+                    module_name = os.path.splitext(file)[0]
+                    module_path = os.path.join(root, file)
+                    spec = importlib.util.spec_from_file_location(module_name, module_path)
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+
+                    for attr_name in dir(module):
+                        attr = getattr(module, attr_name)
+                        if hasattr(attr, "__kmc_handler_type__") and hasattr(attr, "__kmc_var_type__"):
+                            handler_type = getattr(attr, "__kmc_handler_type__")
+                            var_type = getattr(attr, "__kmc_var_type__")
+
+                            if handler_type == "context":
+                                self.discovered_handlers.add((handler_type, var_type, attr))
+                            elif handler_type == "metadata":
+                                self.discovered_handlers.add((handler_type, var_type, attr))
+                            elif handler_type == "generative":
+                                self.discovered_handlers.add((handler_type, var_type, attr))
+
+                            handler_count += 1
+
+        return handler_count
 
     def _scan_directory_for_plugins(self, directory):
         """Busca y registra plugins en un directorio"""
         self.logger.info(f"Escaneando plugins en: {directory}")
-        # Implementación futura para registrar plugins
-        return 0
+        plugin_count = 0
+
+        for root, _, files in os.walk(directory):
+            for file in files:
+                if file.endswith(".py"):
+                    module_name = os.path.splitext(file)[0]
+                    module_path = os.path.join(root, file)
+                    spec = importlib.util.spec_from_file_location(module_name, module_path)
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+
+                    for attr_name in dir(module):
+                        attr = getattr(module, attr_name)
+                        if isinstance(attr, type) and issubclass(attr, KMCPlugin) and attr is not KMCPlugin:
+                            self.discovered_plugins.add(attr)
+                            plugin_count += 1
+
+        return plugin_count

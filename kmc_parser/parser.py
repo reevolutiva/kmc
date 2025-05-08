@@ -46,6 +46,20 @@ class KMCParser:
         base_path = ext_directory or os.path.dirname(__file__)
         stats = discovery.discover_all_extensions(base_path=base_path)
         self.logger.info(f"Extensiones descubiertas: {stats}")
+        
+        # Registrar handlers descubiertos
+        for handler_type, var_type, handler in discovery.discovered_handlers:
+            if handler_type == "context":
+                self.context_handlers[var_type] = handler()
+            elif handler_type == "metadata":
+                self.metadata_handlers[var_type] = handler()
+            elif handler_type == "generative":
+                self.generative_handlers[f"{var_type}"] = handler()
+        
+        # Registrar plugins descubiertos
+        for plugin_cls in discovery.discovered_plugins:
+            plugin_instance = plugin_cls()
+            plugin_instance.initialize()
     
     def _load_default_plugins(self):
         """
