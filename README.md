@@ -448,3 +448,43 @@ El SDK de KMC permite a los desarrolladores gestionar variables y métodos de ma
     *Plugin system to extend functionality.*
   - Integración de la arquitectura expandible con el parser existente.
     *Integration of the expandable architecture with the existing parser.*
+
+## Nueva Funcionalidad: Generación de Plantillas Basadas en Prompts | New Feature: Prompt-Based Template Generation
+
+KMC ahora incluye una funcionalidad para generar plantillas Markdown dinámicas basadas en prompts proporcionados por el usuario. Esta característica permite a los desarrolladores crear documentos que cumplen con el estándar KMC de manera eficiente y precisa.
+
+*KMC now includes a functionality to generate dynamic Markdown templates based on prompts provided by the user. This feature allows developers to create documents that comply with the KMC standard efficiently and accurately.*
+
+### Características Principales | Key Features
+
+- **Generación Automática**: Crea plantillas Markdown dinámicas basadas en prompts.
+- **Cumplimiento del Estándar KMC**: Las plantillas generadas son compatibles con el parser KMC.
+- **Integración con el Frontend de Kimfe**: Soporte para la interfaz web de Kimfe para gestionar prompts y visualizar plantillas generadas.
+
+### Uso Básico | Basic Usage
+
+1. **Proporcionar Prompts**: El usuario ingresa prompts en la interfaz web de Kimfe.
+2. **Generación de Plantilla**: El sistema genera una plantilla Markdown basada en los prompts.
+3. **Edición y Exportación**: La plantilla generada se puede editar y exportar desde la interfaz.
+
+### Ejemplo de Prompt | Prompt Example
+
+```markdown
+# Proyecto: [[project:nombre]]
+Versión: [{doc:version}]
+Organización: [[org:nombre_empresa]]
+
+<!-- KMC_DEFINITION FOR [{doc:resumen_proyecto}]:
+GENERATIVE_SOURCE = {{ai:gpt4:extract_summary}}
+PROMPT = "Resume el objetivo principal del proyecto [[project:nombre]]."
+FORMAT = "text/markdown; max_length=200"
+-->
+
+## Resumen del Proyecto | Project Summary
+[{doc:resumen_proyecto}]
+```
+
+### Documentación Relacionada | Related Documentation
+
+- [Guía de Sintaxis | Syntax Guide](docs/SYNTAX.md)
+- [Ejemplos de Uso | Usage Examples](examples/)
