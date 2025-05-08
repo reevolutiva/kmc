@@ -6,10 +6,10 @@ import logging
 import json
 import os
 
-from .plugin_base import KMCPlugin
-from ..handlers.base import GenerativeHandler, generative_handler
-from ..models import GenerativeVariable
-from ..core.registry import registry
+from kmc_parser.extensions.plugin_base import KMCPlugin
+from kmc_parser.handlers.base import GenerativeHandler, generative_handler
+from kmc_parser.models import GenerativeVariable
+from kmc_parser.core.registry import registry
 
 
 class WeatherAPIHandler(GenerativeHandler):

@@ -1,166 +1,170 @@
 """
-Plugin Manager - Gestor de plugins para KMC Parser
+Gestor de plugins para KMC Parser.
+
+Este módulo proporciona un gestor centralizado para los plugins de KMC,
+facilitando su registro, configuración y utilización.
 """
 import logging
 import importlib
-import pkgutil
-import inspect
-from typing import Dict, List, Any, Optional, Type, Set
+import pkgutil  # Añadir importación faltante
+from typing import Dict, List, Any, Optional
 
 from .plugin_base import KMCPlugin
-
+from ..core import registry
 
 class PluginManager:
     """
-    Gestor de plugins para KMC Parser.
+    Gestor centralizado para plugins de KMC.
     
-    Esta clase maneja la carga, inicialización y gestión del ciclo de vida
-    de los plugins de extensión para KMC Parser, permitiendo extender las
-    funcionalidades de forma modular.
+    Proporciona métodos para cargar, configurar y acceder a plugins registrados.
     """
     
     def __init__(self):
-        """Inicializa el gestor de plugins"""
-        self.plugins: Dict[str, KMCPlugin] = {}
-        self.logger = logging.getLogger("kmc.plugins")
+        """Inicializa el gestor de plugins."""
+        self.logger = logging.getLogger("kmc.plugin_manager")
+        # Mantener un registro de los plugins cargados y sus opciones
+        self.plugins_config: Dict[str, Dict[str, Any]] = {}
     
-    def register_plugin(self, plugin: KMCPlugin) -> bool:
+    def load_plugin(self, plugin_class_or_module: Any, options: Dict[str, Any] = None) -> bool:
         """
-        Registra un plugin en el sistema.
+        Carga e inicializa un plugin específico.
         
         Args:
-            plugin: Instancia del plugin a registrar
+            plugin_class_or_module: Clase del plugin o ruta al módulo del plugin
+            options: Opciones de configuración para el plugin
             
         Returns:
-            True si el registro fue exitoso, False en caso contrario
+            bool: True si el plugin se cargó correctamente
         """
-        if plugin.name in self.plugins:
-            self.logger.warning(f"Plugin '{plugin.name}' ya está registrado. Omitiendo.")
-            return False
+        options = options or {}
         
-        try:
-            if plugin.initialize():
-                self.plugins[plugin.name] = plugin
-                plugin._registered = True
-                self.logger.info(f"Plugin '{plugin.name}' v{plugin.version} registrado exitosamente")
+        # Determinar si lo que recibimos es una clase o una ruta de módulo
+        if isinstance(plugin_class_or_module, str):
+            # Es una ruta de módulo, intentar importarla
+            try:
+                module = importlib.import_module(plugin_class_or_module)
+                # Buscar todas las clases en el módulo que heredan de KMCPlugin
+                plugin_classes = []
+                for name in dir(module):
+                    obj = getattr(module, name)
+                    if isinstance(obj, type) and issubclass(obj, KMCPlugin) and obj != KMCPlugin:
+                        plugin_classes.append(obj)
+                
+                if not plugin_classes:
+                    self.logger.error(f"No se encontraron plugins en el módulo {plugin_class_or_module}")
+                    return False
+                
+                # Inicializar todos los plugins encontrados
+                for plugin_class in plugin_classes:
+                    try:
+                        plugin = plugin_class()
+                        if registry.register_plugin(plugin):
+                            self.plugins_config[plugin.__class__.__name__] = options
+                    except Exception as e:
+                        self.logger.error(f"Error al inicializar plugin {plugin_class.__name__}: {str(e)}")
+                        return False
+                
                 return True
-            else:
-                self.logger.warning(f"Plugin '{plugin.name}' falló al inicializarse")
+                
+            except ImportError as e:
+                self.logger.error(f"No se pudo importar el módulo del plugin {plugin_class_or_module}: {str(e)}")
                 return False
-        except Exception as e:
-            self.logger.error(f"Error al registrar plugin '{plugin.name}': {str(e)}")
+                
+        elif isinstance(plugin_class_or_module, type) and issubclass(plugin_class_or_module, KMCPlugin):
+            # Es una clase de plugin, inicializarla directamente
+            try:
+                plugin = plugin_class_or_module()
+                if registry.register_plugin(plugin):
+                    self.plugins_config[plugin.__class__.__name__] = options
+                    return True
+                return False
+            except Exception as e:
+                self.logger.error(f"Error al inicializar plugin {plugin_class_or_module.__name__}: {str(e)}")
+                return False
+                
+        else:
+            self.logger.error(f"Tipo de entrada inválido para cargar plugin: {type(plugin_class_or_module)}")
             return False
     
-    def unregister_plugin(self, plugin_name: str) -> bool:
+    def get_plugin_config(self, plugin_name: str) -> Dict[str, Any]:
         """
-        Elimina un plugin del sistema.
+        Obtiene la configuración actual de un plugin específico.
         
         Args:
-            plugin_name: Nombre del plugin a eliminar
+            plugin_name: Nombre de la clase del plugin
             
         Returns:
-            True si se eliminó correctamente, False si no existía o hubo error
+            Dict: Opciones de configuración del plugin o diccionario vacío si no existe
         """
-        plugin = self.plugins.get(plugin_name)
-        if not plugin:
-            self.logger.warning(f"Plugin '{plugin_name}' no está registrado")
-            return False
-        
-        try:
-            plugin.cleanup()
-            del self.plugins[plugin_name]
-            plugin._registered = False
-            self.logger.info(f"Plugin '{plugin_name}' eliminado exitosamente")
-            return True
-        except Exception as e:
-            self.logger.error(f"Error al eliminar plugin '{plugin_name}': {str(e)}")
-            return False
+        return self.plugins_config.get(plugin_name, {})
     
-    def get_plugin(self, plugin_name: str) -> Optional[KMCPlugin]:
+    def update_plugin_config(self, plugin_name: str, options: Dict[str, Any]) -> bool:
         """
-        Obtiene un plugin por su nombre.
+        Actualiza la configuración de un plugin específico.
         
         Args:
-            plugin_name: Nombre del plugin a obtener
+            plugin_name: Nombre de la clase del plugin
+            options: Nuevas opciones de configuración (se fusionarán con las existentes)
             
         Returns:
-            Instancia del plugin o None si no existe
+            bool: True si la actualización fue exitosa
         """
-        return self.plugins.get(plugin_name)
-    
-    def get_all_plugins(self) -> List[KMCPlugin]:
-        """
-        Obtiene todos los plugins registrados.
+        if plugin_name not in self.plugins_config:
+            self.logger.warning(f"Intentando actualizar configuración de plugin no registrado: {plugin_name}")
+            self.plugins_config[plugin_name] = {}
         
-        Returns:
-            Lista de instancias de plugins
-        """
-        return list(self.plugins.values())
+        # Fusionar opciones nuevas con existentes
+        self.plugins_config[plugin_name].update(options)
+        self.logger.debug(f"Configuración actualizada para plugin {plugin_name}")
+        return True
     
-    def discover_plugins(self, package) -> List[Type[KMCPlugin]]:
+    def get_plugin_instance(self, plugin_name: str) -> Optional[KMCPlugin]:
         """
-        Descubre automáticamente plugins disponibles en un paquete.
+        Obtiene la instancia de un plugin registrado por su nombre.
         
         Args:
-            package: Paquete Python donde buscar plugins
+            plugin_name: Nombre de la clase del plugin
             
         Returns:
-            Lista de clases de plugins encontradas
+            KMCPlugin: Instancia del plugin o None si no se encuentra
         """
-        discovered = []
-        
-        # Recorrer todos los módulos en el paquete
-        for _, name, is_pkg in pkgutil.iter_modules(package.__path__):
-            # Cargar el módulo
-            module = importlib.import_module(f"{package.__name__}.{name}")
-            
-            # Buscar clases de plugin
-            for item_name, item in inspect.getmembers(module, inspect.isclass):
-                if (
-                    issubclass(item, KMCPlugin) and 
-                    item is not KMCPlugin and
-                    not getattr(item, "__abstract__", False)
-                ):
-                    discovered.append(item)
-                    self.logger.debug(f"Plugin descubierto: {item_name}")
-        
-        return discovered
+        # Buscar entre los plugins registrados en registry
+        for plugin in registry.plugins:
+            if plugin.__class__.__name__ == plugin_name:
+                return plugin
+        return None
     
-    def load_discovered_plugins(self, package, configs: Optional[Dict[str, Dict[str, Any]]] = None) -> int:
+    def load_discovered_plugins(self, module_or_package):
         """
-        Descubre y carga automáticamente plugins desde un paquete.
+        Carga plugins descubiertos en un módulo o paquete específico.
+        
+        Esta función es útil para cargar plugins que se descubren durante
+        la importación de un módulo o paquete.
         
         Args:
-            package: Paquete Python donde buscar plugins
-            configs: Diccionario opcional con configuraciones para los plugins
-                    (clave: nombre del plugin, valor: configuración)
+            module_or_package: Módulo o paquete donde buscar plugins
             
         Returns:
-            Número de plugins cargados exitosamente
+            int: Número de plugins cargados correctamente
         """
-        discovered = self.discover_plugins(package)
         loaded_count = 0
         
-        for plugin_cls in discovered:
-            # Obtener configuración si existe
-            config = None
-            if configs and plugin_cls.__name__ in configs:
-                config = configs[plugin_cls.__name__]
-            
-            # Instanciar y registrar el plugin
+        if hasattr(module_or_package, "__path__"):
+            # Es un paquete, intentar importar todos sus submódulos
+            package_name = module_or_package.__name__
             try:
-                plugin_instance = plugin_cls(config=config)
-                if self.register_plugin(plugin_instance):
-                    loaded_count += 1
+                # Importar todos los submódulos encontrados
+                for _, name, is_pkg in pkgutil.iter_modules(module_or_package.__path__, f"{package_name}."):
+                    if not is_pkg:
+                        try:
+                            importlib.import_module(name)
+                            loaded_count += 1
+                        except ImportError:
+                            self.logger.warning(f"No se pudo importar el módulo {name}")
             except Exception as e:
-                self.logger.error(f"Error al cargar plugin {plugin_cls.__name__}: {str(e)}")
-        
+                self.logger.error(f"Error al cargar plugins del paquete {package_name}: {str(e)}")
+                
         return loaded_count
-    
-    def cleanup_all(self) -> None:
-        """Limpia y elimina todos los plugins registrados"""
-        for name in list(self.plugins.keys()):
-            self.unregister_plugin(name)
 
 
 # Instancia global del gestor de plugins

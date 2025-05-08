@@ -73,7 +73,7 @@ class ITSCOPIntegration:
             self.middleware = LlamaIndexMiddleware(index=self.index.index)
             
             # Registra handlers para diferentes tipos de variables generativas
-            from .llamaindex import LlamaIndexHandler, LlamaIndexQAHandler, LlamaIndexSummaryHandler
+            from .kmc_llamaindex_bridge import LlamaIndexHandler, LlamaIndexQAHandler, LlamaIndexSummaryHandler
             
             # Handlers para diferentes tipos de consulta
             qa_handler = LlamaIndexQAHandler(query_engine=self.middleware.create_query_engine())

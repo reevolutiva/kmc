@@ -1,8 +1,15 @@
 """
-KMC Parser - Core parser para Kimfe Markdown Convention
+KMC Parser - Implementation of the Kimfe Markdown Convention.
+
+This package provides tools for processing Markdown files with enhanced variable support
+according to the Kimfe Markdown Convention (KMC).
 """
 
+__version__ = "1.0.0"
+
+# Import main classes for easier access
 from .parser import KMCParser
+
 from .models import (
     ContextualVariable, 
     MetadataVariable, 
@@ -23,8 +30,6 @@ from .handlers import (
     generative_handler
 )
 from .extensions import KMCPlugin, plugin_manager
-
-__version__ = "0.3.0"
 
 __all__ = [
     "KMCParser",

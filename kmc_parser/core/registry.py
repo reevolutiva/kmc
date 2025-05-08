@@ -1,132 +1,149 @@
 """
-Registry - Sistema central de registro para handlers y extensiones de KMC Parser
+Registro central para KMC.
+
+Este módulo proporciona un registro centralizado para handlers de variables y plugins.
 """
-from typing import Dict, Any, List, Optional, Callable, Type
 import logging
-import inspect
+from typing import Dict, Any, List, Optional, Callable, Union
+
+logger = logging.getLogger("kmc.registry")
 
 class HandlerRegistry:
-    """
-    Registro centralizado para handlers de variables KMC.
-    
-    Esta clase implementa un patrón Registry para mantener y gestionar
-    handlers para diferentes tipos de variables (contexto, metadata, generativas).
-    Permite el descubrimiento automático y el registro declarativo de handlers.
-    """
+    """Registro centralizado para handlers de variables y plugins de KMC."""
     
     def __init__(self):
-        """Inicializa los registros para cada tipo de variable"""
+        """Inicializa un nuevo registro vacío."""
         self.context_handlers: Dict[str, Callable] = {}
         self.metadata_handlers: Dict[str, Callable] = {}
         self.generative_handlers: Dict[str, Callable] = {}
-        self.logger = logging.getLogger("kmc.registry")
+        self.plugins: List[Any] = []
+        self.logger = logger
     
-    def register_context_handler(self, var_type: str, handler: Callable) -> None:
+    def register_context_handler(self, var_type: str, handler_function: Callable) -> None:
         """
-        Registra un handler para variables contextuales [[tipo:nombre]].
+        Registra un handler para variables contextuales.
         
         Args:
-            var_type: Tipo de variable contextual (ej. "project", "user", "org")
-            handler: Función que procesa la variable y retorna un valor
+            var_type: Tipo de variable (ej. "project", "user")
+            handler_function: Función para resolver variables
         """
-        self.logger.debug(f"Registrando handler de contexto para '{var_type}'")
-        self.context_handlers[var_type] = handler
+        self.logger.debug(f"Registrando handler contextual para: {var_type}")
+        self.context_handlers[var_type] = handler_function
     
-    def register_metadata_handler(self, var_type: str, handler: Callable) -> None:
+    def register_metadata_handler(self, var_type: str, handler_function: Callable) -> None:
         """
-        Registra un handler para variables de metadata [{tipo:nombre}].
+        Registra un handler para variables de metadata.
         
         Args:
-            var_type: Tipo de variable metadata (ej. "doc", "kb")
-            handler: Función que procesa la variable y retorna un valor
+            var_type: Tipo de variable (ej. "doc", "kb")
+            handler_function: Función para resolver variables
         """
-        self.logger.debug(f"Registrando handler de metadata para '{var_type}'")
-        self.metadata_handlers[var_type] = handler
+        self.logger.debug(f"Registrando handler de metadata para: {var_type}")
+        self.metadata_handlers[var_type] = handler_function
     
-    def register_generative_handler(self, var_type: str, handler: Callable) -> None:
+    def register_generative_handler(self, var_type: str, handler_function: Callable) -> None:
         """
-        Registra un handler para variables generativas {{categoria:subtipo:nombre}}.
+        Registra un handler para variables generativas.
         
         Args:
-            var_type: Tipo de variable generativa (ej. "ai:gpt4", "api:weather")
-            handler: Función que procesa la variable generativa y retorna un valor
+            var_type: Tipo de variable (ej. "ai:gpt4", "tool:sentiment")
+            handler_function: Función para generar contenido
         """
-        self.logger.debug(f"Registrando handler generativo para '{var_type}'")
-        self.generative_handlers[var_type] = handler
+        self.logger.debug(f"Registrando handler generativo para: {var_type}")
+        self.generative_handlers[var_type] = handler_function
     
+    def register_plugin(self, plugin_instance: Any) -> bool:
+        """
+        Registra e inicializa un plugin KMC.
+        
+        Args:
+            plugin_instance: Instancia del plugin a registrar
+            
+        Returns:
+            bool: True si el plugin se registró e inicializó correctamente
+        """
+        plugin_name = plugin_instance.__class__.__name__
+        self.logger.debug(f"Registrando plugin: {plugin_name}")
+        
+        # Verificar que el plugin no esté ya registrado
+        for existing_plugin in self.plugins:
+            if existing_plugin.__class__.__name__ == plugin_name:
+                self.logger.warning(f"Plugin {plugin_name} ya está registrado, omitiendo")
+                return False
+        
+        # Inicializar el plugin
+        try:
+            if plugin_instance.initialize():
+                self.plugins.append(plugin_instance)
+                self.logger.info(f"Plugin {plugin_name} registrado e inicializado correctamente")
+                return True
+            else:
+                self.logger.error(f"Plugin {plugin_name} falló en inicialización")
+                return False
+        except Exception as e:
+            self.logger.error(f"Error al inicializar plugin {plugin_name}: {str(e)}")
+            return False
+    
+    # Métodos de acceso para obtener handlers registrados
     def get_context_handler(self, var_type: str) -> Optional[Callable]:
-        """Obtiene el handler registrado para un tipo de variable contextual"""
+        """
+        Obtiene un handler contextual por su tipo.
+        
+        Args:
+            var_type: Tipo de variable contextual
+            
+        Returns:
+            Callable o None si no se encuentra el handler
+        """
         return self.context_handlers.get(var_type)
     
     def get_metadata_handler(self, var_type: str) -> Optional[Callable]:
-        """Obtiene el handler registrado para un tipo de variable de metadata"""
+        """
+        Obtiene un handler de metadata por su tipo.
+        
+        Args:
+            var_type: Tipo de variable de metadata
+            
+        Returns:
+            Callable o None si no se encuentra el handler
+        """
         return self.metadata_handlers.get(var_type)
     
     def get_generative_handler(self, var_type: str) -> Optional[Callable]:
-        """Obtiene el handler registrado para un tipo de variable generativa"""
+        """
+        Obtiene un handler generativo por su tipo.
+        
+        Args:
+            var_type: Tipo de variable generativa
+            
+        Returns:
+            Callable o None si no se encuentra el handler
+        """
         return self.generative_handlers.get(var_type)
     
-    def register_handlers_from_module(self, module) -> int:
-        """
-        Registra automáticamente todos los handlers definidos en un módulo.
-        Los handlers deben tener un atributo `__kmc_handler_type__` y `__kmc_var_type__`.
-        
-        Args:
-            module: Módulo Python desde donde cargar los handlers
-            
-        Returns:
-            Número de handlers registrados
-        """
-        count = 0
-        
-        # Buscar todas las clases o funciones en el módulo
-        for name, obj in inspect.getmembers(module):
-            # Verificar si el objeto tiene los atributos necesarios
-            if hasattr(obj, "__kmc_handler_type__") and hasattr(obj, "__kmc_var_type__"):
-                handler_type = getattr(obj, "__kmc_handler_type__")
-                var_type = getattr(obj, "__kmc_var_type__")
-                
-                # Registrar el handler según su tipo
-                if handler_type == "context":
-                    self.register_context_handler(var_type, obj())
-                elif handler_type == "metadata":
-                    self.register_metadata_handler(var_type, obj())
-                elif handler_type == "generative":
-                    self.register_generative_handler(var_type, obj())
-                
-                count += 1
-        
-        return count
+    def clear_handlers(self) -> None:
+        """Limpia todos los handlers registrados."""
+        self.context_handlers = {}
+        self.metadata_handlers = {}
+        self.generative_handlers = {}
+        self.logger.debug("Todos los handlers han sido eliminados del registro")
     
-    def register_from_config(self, config: Dict[str, Any]) -> int:
-        """
-        Registra handlers a partir de una configuración en diccionario.
+    def clear_plugins(self) -> None:
+        """Limpia y finaliza todos los plugins registrados."""
+        for plugin in self.plugins:
+            try:
+                plugin.shutdown()
+            except Exception as e:
+                self.logger.error(f"Error al cerrar plugin {plugin.__class__.__name__}: {str(e)}")
         
-        Args:
-            config: Configuración con handlers para cada tipo de variable
-            
-        Returns:
-            Número de handlers registrados
-        """
-        count = 0
-        
-        # Registrar handlers de contexto
-        for var_type, handler in config.get("context", {}).items():
-            self.register_context_handler(var_type, handler)
-            count += 1
-        
-        # Registrar handlers de metadata
-        for var_type, handler in config.get("metadata", {}).items():
-            self.register_metadata_handler(var_type, handler)
-            count += 1
-        
-        # Registrar handlers generativos
-        for var_type, handler in config.get("generative", {}).items():
-            self.register_generative_handler(var_type, handler)
-            count += 1
-        
-        return count
+        self.plugins = []
+        self.logger.debug("Todos los plugins han sido eliminados del registro")
+    
+    def clear_all(self) -> None:
+        """Limpia todos los handlers y plugins registrados."""
+        self.clear_handlers()
+        self.clear_plugins()
+        self.logger.debug("Registro completamente limpio")
 
-
-# Instancia global del registro
+# Instancia global del registro para acceso fácil
 registry = HandlerRegistry()

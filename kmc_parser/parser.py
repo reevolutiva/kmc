@@ -7,10 +7,10 @@ import logging
 from importlib import import_module
 import os
 
-from .models import ContextualVariable, MetadataVariable, GenerativeVariable, KMCDocument, KMCVariableDefinition
+from kmc_parser.models import ContextualVariable, MetadataVariable, GenerativeVariable, KMCDocument, KMCVariableDefinition
 # Importar el sistema de registro centralizado
-from .core import registry
-from .extensions.auto_discovery import ExtensionDiscovery
+from kmc_parser.core import registry
+from kmc_parser.extensions.auto_discovery import ExtensionDiscovery
 
 
 class KMCParser:
@@ -53,11 +53,11 @@ class KMCParser:
         Esta función intenta cargar plugins desde la carpeta kmc_parser/extensions
         si encuentra el módulo de plugin_manager.
         """
-        from .extensions import plugin_manager
+        from kmc_parser.extensions import plugin_manager
         
         # Intentar importar paquetes de plugins
         try:
-            from . import handlers
+            from kmc_parser import handlers
             plugin_manager.load_discovered_plugins(handlers)
         except (ImportError, AttributeError) as e:
             self.logger.debug(f"No se pudieron cargar handlers automáticamente: {str(e)}")
@@ -128,179 +128,6 @@ class KMCParser:
         """
         return KMCVariableDefinition.parse_definitions(content)
     
-    def _resolve_contextual_var(self, var: ContextualVariable) -> Optional[str]:
-        """Resuelve el valor de una variable contextual"""
-        # Primero intentar con el handler local
-        handler = self.context_handlers.get(var.type)
-        if handler:
-            return handler(var.name)
-        
-        # Si no hay handler local, buscar en el registro centralizado
-        registry_handler = registry.get_context_handler(var.type)
-        if registry_handler:
-            return registry_handler(var.name)
-            
-        return None
-    
-    def _resolve_metadata_var(self, var: MetadataVariable) -> Optional[str]:
-        """Resuelve el valor de una variable de metadata"""
-        # Primero, verificar si existe una definición para esta variable
-        var_key = f"{var.type}:{var.name}"
-        if var_key in self.variable_definitions:
-            definition = self.variable_definitions[var_key]
-            # Resolver la variable generativa asociada
-            resolved_value = self._resolve_variable_definition(definition)
-            if resolved_value is not None:
-                return resolved_value
-        
-        # Si no hay definición o falló la resolución, usar el handler tradicional
-        
-        # Intentar con el handler local
-        handler = self.metadata_handlers.get(var.type)
-        if handler:
-            return handler(var.name)
-        
-        # Si no hay handler local, buscar en el registro centralizado
-        registry_handler = registry.get_metadata_handler(var.type)
-        if registry_handler:
-            return registry_handler(var.name)
-            
-        return None
-    
-    def _resolve_generative_var(self, var: GenerativeVariable, doc: KMCDocument) -> Optional[str]:
-        """
-        Resuelve el valor de una variable generativa.
-        
-        Args:
-            var (GenerativeVariable): La variable generativa a resolver
-            doc (KMCDocument): El documento KMC completo
-            
-        Returns:
-            Optional[str]: El valor generado o None si no se pudo resolver
-        """
-        # Obtener el handler correspondiente
-        
-        # Primero intentar con el handler local
-        handler = self.generative_handlers.get(var.handler_key)
-        
-        # Si no hay handler local, buscar en el registro centralizado
-        if not handler:
-            self.logger.error(f"No se encontró un handler para la clave: {var.handler_key}")
-            return None
-
-        # Buscar el prompt asociado
-        prompt = doc.prompts.get(var.fullname)
-        if not prompt:
-            self.logger.warning(f"No se encontró un prompt para la variable: {var.fullname}")
-            return None
-
-        # Resolver el prompt (reemplazar variables contextuales y de metadata)
-        resolved_prompt = self._resolve_variables_in_text(prompt, doc)
-
-        # Llamar al handler con el prompt resuelto
-        try:
-            var.prompt = resolved_prompt
-            return handler(var)
-        except Exception as e:
-            self.logger.error(f"Error al ejecutar el handler para {var.fullname}: {str(e)}")
-            return None
-    
-    def _resolve_variable_definition(self, definition: KMCVariableDefinition) -> Optional[str]:
-        """
-        Resuelve una definición de variable KMC.
-        
-        Args:
-            definition (KMCVariableDefinition): La definición a resolver
-            
-        Returns:
-            Optional[str]: El valor generado o None si no se pudo resolver
-        """
-        # Obtener las partes de la variable generativa
-        gen_parts = definition.generative_var.split(':')
-        if len(gen_parts) < 2:
-            return None
-            
-        category = gen_parts[0]
-        subtype = gen_parts[1]
-        name = gen_parts[2] if len(gen_parts) > 2 else ""
-        
-        # Crear la variable generativa
-        gen_var = GenerativeVariable(category, subtype, name, prompt=definition.prompt)
-        
-        # Resolver el prompt (reemplazar variables)
-        resolved_prompt = self._resolve_variables_in_prompt(definition.prompt)
-        gen_var.prompt = resolved_prompt
-        
-        # Buscar el handler correspondiente
-        handler_key = f"{category}:{subtype}"
-        handler = self.generative_handlers.get(handler_key)
-        if not handler:
-            return None
-            
-        # Llamar al handler con la variable generativa
-        return handler(gen_var)
-    
-    def _resolve_variables_in_text(self, text: str, doc: KMCDocument) -> str:
-        """
-        Resuelve todas las variables en un texto.
-        
-        Args:
-            text (str): El texto con variables
-            doc (KMCDocument): El documento KMC completo
-            
-        Returns:
-            str: El texto con las variables resueltas
-        """
-        result = text
-        
-        # Resolver variables contextuales
-        for var in doc.contextual_vars:
-            if var.fullname in result:
-                value = self._resolve_contextual_var(var)
-                if value is not None:
-                    result = result.replace(var.fullname, value)
-        
-        # Resolver variables de metadata
-        for var in doc.metadata_vars:
-            if var.fullname in result:
-                value = self._resolve_metadata_var(var)
-                if value is not None:
-                    result = result.replace(var.fullname, value)
-        
-        return result
-    
-    def _resolve_variables_in_prompt(self, prompt: str) -> str:
-        """
-        Resuelve las variables en un prompt de definición.
-        
-        Args:
-            prompt (str): El prompt con variables
-            
-        Returns:
-            str: El prompt con variables resueltas
-        """
-        result = prompt
-        
-        # Resolver variables contextuales
-        context_pattern = r'\[\[([\w]+):([\w_]+)\]\]'
-        for match in re.finditer(context_pattern, prompt):
-            var_type, var_name = match.groups()
-            var = ContextualVariable(var_type, var_name)
-            value = self._resolve_contextual_var(var)
-            if value is not None:
-                result = result.replace(var.fullname, value)
-        
-        # Resolver variables de metadata
-        metadata_pattern = r'\[\{([\w]+):([\w_]+)\}\]'
-        for match in re.finditer(metadata_pattern, prompt):
-            var_type, var_name = match.groups()
-            var = MetadataVariable(var_type, var_name)
-            value = self._resolve_metadata_var(var)
-            if value is not None:
-                result = result.replace(var.fullname, value)
-                
-        return result
-    
     def parse(self, content: str) -> KMCDocument:
         """
         Parsea un documento KMC y extrae todas las variables.
@@ -331,41 +158,70 @@ class KMCParser:
     def render(self, content: str) -> str:
         """
         Renderiza un documento KMC reemplazando todas las variables por sus valores.
-        
+
         Reglas de renderizado:
         1. Variables contextuales [[tipo:nombre]] - Siempre se renderizan
-        2. Variables de metadata [{tipo:nombre}] - Se renderizan cuando tienen definiciones o handlers
-        3. Variables generativas {{categoria:subtipo:nombre}} - Ahora se renderizan directamente si tienen un handler asociado
-        
+        2. Variables de metadata [{tipo:nombre}] - Solo se renderizan si tienen definición KMC_DEFINITION
+        3. Variables generativas {{categoria:subtipo:nombre}} - Nunca se renderizan directamente
+
         Args:
             content (str): Contenido del documento KMC
-            
         Returns:
             str: Documento con variables reemplazadas
         """
         doc = self.parse(content)
         result = content
 
-        # Primero reemplazar las variables contextuales
+        # Reemplazar variables contextuales
         for var in doc.contextual_vars:
-            value = self._resolve_contextual_var(var)
+            value = None
+            
+            # Intentar obtener un handler registrado para este tipo de variable
+            registry_handler = registry.get_context_handler(var.type)
+            
+            if registry_handler:
+                try:
+                    value = registry_handler(var.name)
+                except Exception as e:
+                    self.logger.error(f"Error al resolver la variable contextual {var.type}:{var.name}: {str(e)}")
+                    value = f"ERROR:{var.type}:{var.name}"
+            
+            # Si no hay handler en el registro, usar los handlers locales (compatibilidad hacia atrás)
+            elif var.type in self.context_handlers:
+                value = self.context_handlers[var.type](var.name)
+
             if value is not None:
                 var.value = value
                 result = result.replace(var.fullname, value)
 
-        # Luego reemplazar las variables de metadata
+        # Reemplazar variables de metadata SOLO si tienen definición KMC_DEFINITION
         for var in doc.metadata_vars:
-            value = self._resolve_metadata_var(var)
-            if value is not None:
-                var.value = value
-                result = result.replace(var.fullname, value)
+            var_key = f"{var.type}:{var.name}"
+            if var_key in self.variable_definitions:
+                value = None
+                
+                # Intentar obtener un handler registrado para este tipo de variable
+                registry_handler = registry.get_metadata_handler(var.type)
+                
+                if registry_handler:
+                    try:
+                        value = registry_handler(var.name)
+                    except Exception as e:
+                        self.logger.error(f"Error al resolver la variable de metadata {var.type}:{var.name}: {str(e)}")
+                        value = f"ERROR:{var.type}:{var.name}"
+                
+                # Si no hay handler en el registro, usar los handlers locales (compatibilidad hacia atrás)
+                elif var.type in self.metadata_handlers:
+                    value = self.metadata_handlers[var.type](var.name)
 
-        # Reemplazar las variables generativas
-        for var in doc.generative_vars:
-            value = self._resolve_generative_var(var, doc)
-            if value is not None:
-                self.logger.info(f"Variable generativa resuelta: {var.fullname} -> {value}")
-                result = result.replace(var.fullname, value)
+                if value is not None:
+                    var.value = value
+                    result = result.replace(var.fullname, value)
+            # Si no hay definición, dejar el placeholder intacto
+
+        # NO reemplazar variables generativas directamente (cumple la convención)
+        # for var in doc.generative_vars:
+        #     ...
 
         # Eliminar comentarios de instrucciones
         result = re.sub(r'<!-- (AI_PROMPT|API_SOURCE|TOOL_CONFIG|CALC_FORMULA).+?-->', '', result, flags=re.DOTALL)
@@ -469,7 +325,7 @@ class KMCParser:
             
         # Procesar variables generativas
         for var in doc.generative_vars:
-            handler_key = var.handler_key
+            handler_key = f"{var.category}:{var.subtype}"
             
             # Si hay un handler predefinido para este tipo, lo usamos
             if handler_key in default_handlers["generative"]:
@@ -481,7 +337,8 @@ class KMCParser:
                     self.generative_handlers[handler_key] = registry_handler
                 else:
                     # Crear un handler genérico que genera un texto de placeholder
-                    self.generative_handlers[handler_key] = lambda var_obj: f"<Contenido generativo para {var_obj.category}:{var_obj.subtype}:{var_obj.name}>"
+                    self.generative_handlers[handler_key] = lambda name, prompt=None, format_type=None: \
+                        f"<Contenido generativo para {var.category}:{var.subtype}:{name}>"
                 
             # Registrar en estadísticas
             if handler_key not in stats["generative"]:

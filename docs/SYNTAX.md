@@ -178,56 +178,28 @@ FORMAT = "markdown; bullet_list"
 
 #### Reglas de Renderizado | Rendering Rules
 
-**Regla fundamental**: 
-- Las variables que comienzan con `[]` (formato `[{tipo:nombre}]`) serán renderizadas una vez procesadas por el sistema.
-- Las variables que comienzan con `{}` (formato `{{categoria:subtipo:nombre}}`) nunca serán renderizadas directamente, sino que se utilizan como fuentes generativas en las definiciones.
+**Regla fundamental:**
+- Las variables contextuales (`[[tipo:nombre]]`) y de metadata (`[{tipo:nombre}]`) son las únicas que se renderizan en el documento final.
+- Las variables generativas (`{{categoria:subtipo:nombre}}`) **nunca** se renderizan directamente en el documento. Su función es servir como fuente de datos o función generadora, y deben ser referenciadas únicamente dentro de bloques de definición `<!-- KMC_DEFINITION ... -->`.
+- Para que una variable de metadata (ej. `[{doc:mi_variable}]`) sea renderizada con contenido generado, debe:
+  1. Existir como placeholder en el cuerpo del documento.
+  2. Tener un bloque `KMC_DEFINITION` que la asocie a una variable generativa y un prompt.
+- El bloque `KMC_DEFINITION` permite procesar la variable de metadata usando la variable generativa (función) y el prompt asociado.
 
-Esta distinción es importante porque separa claramente las declaraciones de variables (placeholders donde aparecerá el contenido) de las fuentes que generan dicho contenido.
-
-_English_
-
-This syntax is fundamental to KMC and establishes a clear rule: for a metadata variable (e.g., `[{doc:my_variable}]`) to be rendered with generated content, **it must exist as a placeholder in the document body AND also have an associated `KMC_DEFINITION` block.**
-
-The `KMC_DEFINITION FOR [{doc:my_variable}]` block does not directly insert content at its own location. Instead, it defines how content will be generated for all instances of the `[{doc:my_variable}]` placeholder found within the document. This definition is global for the document once declared and can be captured by the SDK for reuse.
-
-#### KMC_DEFINITION Structure
+_Ejemplo práctico:_
 
 ```markdown
-<!-- KMC_DEFINITION FOR [{type:name}]:
-GENERATIVE_SOURCE = {{category:subtype:name}}
-PROMPT = "Instructions to generate the content"
-FORMAT = "format/type; additional_parameters"
--->
-```
-
-Where:
-
-- `[{type:name}]` is the metadata variable to be defined
-- `{{category:subtype:name}}` is the generative variable that will provide the content
-- `PROMPT` contains instructions to generate content
-- `FORMAT` (optional) specifies the desired output format
-
-#### Complete Example
-
-```markdown
-<!-- KMC_DEFINITION FOR [{doc:learning_objectives}]:
-GENERATIVE_SOURCE = {{ai:gpt4:extract_objectives}}
-PROMPT = "Extract a list of learning objectives and outcomes from [{kb:content}]. Define as many LOs and LOs as needed to cover the learning objectives"
-FORMAT = "markdown; bullet_list"
+<!-- KMC_DEFINITION FOR [{doc:resumen_ejecutivo}]:
+GENERATIVE_SOURCE = {{ai:gpt4:resumen}}
+PROMPT = "Genera un resumen ejecutivo del proyecto [[project:nombre]]"
+FORMAT = "markdown"
 -->
 
-## Learning Objectives and Outcomes
-
-[{doc:learning_objectives}]
+## Resumen Ejecutivo
+[{doc:resumen_ejecutivo}]
 ```
 
-#### Rendering Rules
-
-**Fundamental rule**:
-- Variables that begin with `[]` (format `[{type:name}]`) will be rendered once processed by the system.
-- Variables that begin with `{}` (format `{{category:subtype:name}}`) will never be rendered directly, but are used as generative sources in definitions.
-
-This distinction is important because it clearly separates variable declarations (placeholders where content will appear) from the sources that generate that content.
+En este ejemplo, `[{doc:resumen_ejecutivo}]` será reemplazada por el contenido generado por la función `{{ai:gpt4:resumen}}` usando el prompt especificado. La variable generativa nunca aparece en el documento final.
 
 ## 3. Encadenamiento de Variables | Variable Chaining
 
@@ -433,126 +405,4 @@ def project_report(project_id):
    - Coloca las definiciones KMC_DEFINITION cerca del principio del documento o cerca de donde se utiliza por primera vez el placeholder | Place KMC_DEFINITION blocks near the beginning of the document or near where the placeholder is first used
 
 4. **Declaración y Definición con `KMC_DEFINITION` (Regla Fundamental):**
-   - _Español_: Para que una variable de metadata (ej. `[{doc:mi_contenido_dinamico}]`) muestre contenido generado, primero debe ser **declarada como un placeholder** en la ubicación deseada dentro del cuerpo del documento. Segundo, debe existir un bloque `<!-- KMC_DEFINITION FOR [{doc:mi_contenido_dinamico}]: ... -->` que defina su fuente generativa y prompt. Esta definición es global para el documento y el SDK puede capturarla para su reutilización.
-   
-   - _English_: For a metadata variable (e.g., `[{doc:my_dynamic_content}]`) to display generated content, it must first be **declared as a placeholder** at the desired location within the document body. Second, there must be a `<!-- KMC_DEFINITION FOR [{doc:my_dynamic_content}]: ... -->` block that defines its generative source and prompt. This definition is global for the document and the SDK can capture it for reuse.
-
-5. **Reglas de Renderizado | Rendering Rules:**
-   - _Español_: Recuerda la regla fundamental: las variables con formato `[{tipo:nombre}]` se renderizan con su contenido, mientras que las variables con formato `{{categoria:subtipo:nombre}}` NUNCA se renderizan directamente (solo se usan como fuentes generativas).
-   
-   - _English_: Remember the fundamental rule: variables with format `[{type:name}]` are rendered with their content, while variables with format `{{category:subtype:name}}` are NEVER rendered directly (they are only used as generative sources).
-
-6. **Reutilización de Variables | Variable Reuse:**
-   - Define variables comunes al inicio del documento | Define common variables at the beginning of the document
-   - Reutiliza las mismas variables para contenido similar | Reuse the same variables for similar content
-   - Aprovecha la capacidad del SDK para capturar definiciones | Take advantage of the SDK's ability to capture definitions
-
-7. **Optimización del Flujo de Trabajo | Workflow Optimization:**
-   - Organiza las definiciones para minimizar dependencias circulares | Organize definitions to minimize circular dependencies
-   - Separa claramente el contenido estático del dinámico | Clearly separate static and dynamic content
-   - Considera el rendimiento al encadenar múltiples variables generativas | Consider performance when chaining multiple generative variables
-
-8. **Compatibilidad con Markdown Estándar | Compatibility with Standard Markdown:**
-   - Asegúrate de que el documento siga siendo válido como Markdown | Ensure the document remains valid as Markdown
-   - Proporciona valores por defecto para variables críticas | Provide default values for critical variables
-   - Verifica el renderizado en diferentes visores de Markdown | Verify rendering in different Markdown viewers
-
-## 8. Depuración y Solución de Problemas | Debugging and Troubleshooting
-
-_Español_
-
-Consejos para identificar y resolver problemas comunes al trabajar con KMC:
-
-_English_
-
-Tips for identifying and resolving common issues when working with KMC:
-
-### 8.1 Verificación de Variables | Variable Verification
-
-Para depurar problemas con variables no resueltas:
-
-To debug issues with unresolved variables:
-
-```python
-from kmc_parser import KMCParser
-
-parser = KMCParser(debug=True)  # Activar modo de depuración
-doc = parser.parse(markdown_content)
-
-# Listar todas las variables encontradas
-for var_type, vars_list in doc.all_variables.items():
-    print(f"Variables de tipo {var_type}:")
-    for var in vars_list:
-        print(f"  - {var.fullname}")
-
-# Verificar definiciones de variables
-for var_key, definition in parser.variable_definitions.items():
-    print(f"Definición para {var_key}:")
-    print(f"  - Fuente generativa: {definition.generative_var}")
-    print(f"  - Prompt: {definition.prompt}")
-    print(f"  - Formato: {definition.format}")
-```
-
-### 8.2 Problemas Comunes y Soluciones | Common Issues and Solutions
-
-| Problema | Problem | Solución | Solution |
-|----------|---------|----------|----------|
-| Variable no se renderiza | Variable not rendering | Verificar que existe su definición KMC_DEFINITION | Verify that its KMC_DEFINITION exists |
-| Error en handler | Handler error | Revisar los logs del handler específico | Check logs for the specific handler |
-| Dependencias circulares | Circular dependencies | Reorganizar definiciones para romper el ciclo | Reorganize definitions to break the cycle |
-| Formato de salida incorrecto | Incorrect output format | Verificar la especificación FORMAT | Verify the FORMAT specification |
-
-## 9. Compatibilidad y Extensiones | Compatibility and Extensions
-
-_Español_
-
-KMC está diseñado para ser extensible y compatible con diversas herramientas y frameworks.
-
-_English_
-
-KMC is designed to be extensible and compatible with various tools and frameworks.
-
-### 9.1 Extensiones Disponibles | Available Extensions
-
-| Extensión | Extension | Descripción | Description | Uso | Usage |
-|-----------|-----------|-------------|-------------|-----|-------|
-| llamaindex | LlamaIndex integration | Integración con LlamaIndex | Integration with LlamaIndex | Búsqueda semántica y acceso a bases de conocimiento | Semantic search and knowledge base access |
-| crewai | CrewAI integration | Integración con CrewAI | Integration with CrewAI | Orquestación de agentes | Agent orchestration |
-| itscop | ITSCOP integration | Integración con ITSCOP | Integration with ITSCOP | Gestión de procesos IT | IT process management |
-
-### 9.2 Creación de Nuevas Extensiones | Creating New Extensions
-
-Los desarrolladores pueden extender KMC implementando nuevos handlers y plugins:
-
-Developers can extend KMC by implementing new handlers and plugins:
-
-```python
-from kmc_parser import KMCPlugin, registry
-from kmc_parser.handlers.base import GenerativeHandler
-
-class MiHandlerGenerativo(GenerativeHandler):
-    def _generate_content(self, var):
-        # Implementación personalizada para generar contenido
-        return f"Contenido generado para {var.name} basado en prompt: {var.prompt}"
-
-class MiPlugin(KMCPlugin):
-    def initialize(self):
-        # Registrar handlers personalizados
-        registry.register_generative_handler("mi_categoria:mi_subtipo", MiHandlerGenerativo())
-        return True
-```
-
-## 10. Referencias | References
-
-_Español_
-
-Recursos adicionales y documentación relacionada con KMC:
-
-_English_
-
-Additional resources and documentation related to KMC:
-
-- [Repositorio de KMC](https://github.com/reevolutiva/kmc) - Código fuente y documentación
-- [Ejemplos de implementación](https://github.com/reevolutiva/kmc/tree/main/examples) - Ejemplos prácticos de uso
-- [Documentación de la API](https://reevolutiva.github.io/kmc/) - Referencia completa de la API de KMC
-- [Guía de desarrollo](https://github.com/reevolutiva/kmc/tree/main/docs) - Recursos para desarrolladores que quieran extender KMC
+   - _Español_: Para que una variable de metadata (ej. `[{doc:mi_contenido_dinamico}]`) muestre contenido generado, primero debe ser **declarada como un placeholder** en la ubicación deseada dentro del cuerpo del documento. Segundo, debe existir un bloque `<!-- KMC_DEFINITION FOR [{doc:mi_contenido_dinamico}]: ... -->` que defina su fuente generativa y prompt. Esta definición es global para el documento y el SDK puede capturarl

@@ -1,94 +1,42 @@
 """
-Base para plugins de extensión del KMC Parser
+Clase base para plugins de KMC.
+
+Este módulo define la clase base para todos los plugins de KMC,
+estableciendo la interfaz común que deben implementar.
 """
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List
 import logging
 
-from ..core.registry import registry
-
-
-class KMCPlugin(ABC):
+class KMCPlugin:
     """
     Clase base para todos los plugins de KMC.
     
-    Los plugins permiten extender el KMC Parser con nuevas funcionalidades
-    de forma modular y sin modificar el código base del sistema.
+    Los plugins permiten extender la funcionalidad de KMC de manera modular,
+    agrupando múltiples handlers u otras características bajo una interfaz común.
     """
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """
-        Inicializa un plugin con configuración opcional.
-        
-        Args:
-            config: Configuración específica para el plugin
-        """
-        self.config = config or {}
+    def __init__(self):
+        """Inicializa el plugin con configuración básica y logging."""
         self.logger = logging.getLogger(f"kmc.plugin.{self.__class__.__name__}")
-        self._registered = False
     
-    @property
-    def name(self) -> str:
-        """Nombre identificador del plugin"""
-        return self.__class__.__name__
-    
-    @property
-    def version(self) -> str:
-        """Versión del plugin"""
-        return getattr(self.__class__, "__version__", "0.1.0")
-    
-    @property
-    def description(self) -> str:
-        """Descripción del plugin"""
-        return self.__class__.__doc__ or "Sin descripción"
-    
-    @property
-    def is_registered(self) -> bool:
-        """Indica si el plugin ya está registrado"""
-        return self._registered
-    
-    @abstractmethod
-    def initialize(self) -> bool:
+    def initialize(self):
         """
-        Inicializa el plugin y registra sus handlers y componentes.
+        Inicializa el plugin. Este método debe ser sobrescrito por las subclases.
+        
+        Típicamente, este método registra handlers u otros componentes en el sistema KMC.
         
         Returns:
-            True si la inicialización fue exitosa, False en caso contrario
+            bool: True si la inicialización fue exitosa, False en caso contrario.
         """
-        pass
+        self.logger.warning(f"Método initialize() no implementado en {self.__class__.__name__}")
+        return False
     
-    def register_handlers(self) -> int:
+    def shutdown(self):
         """
-        Registra los handlers proporcionados por este plugin.
-        Debe ser implementado por clases derivadas que aporten handlers.
+        Finaliza el plugin limpiando recursos. Este método puede ser sobrescrito por las subclases.
+        
+        Se llama cuando el plugin se va a deshabilitar o cuando la aplicación se cierra.
         
         Returns:
-            Número de handlers registrados
+            bool: True si la finalización fue exitosa, False en caso contrario.
         """
-        return 0
-    
-    def cleanup(self) -> None:
-        """
-        Limpia recursos utilizados por el plugin.
-        Este método debe ser llamado cuando el plugin ya no sea necesario.
-        """
-        pass
-    
-    def get_metadata(self) -> Dict[str, Any]:
-        """
-        Retorna metadatos del plugin.
-        
-        Returns:
-            Diccionario con metadata del plugin
-        """
-        return {
-            "name": self.name,
-            "version": self.version,
-            "description": self.description,
-            "config": {k: v for k, v in self.config.items() if k != "credentials"},
-            "is_registered": self.is_registered
-        }
-    
-    def __str__(self) -> str:
-        """Representación en string del plugin"""
-        return f"{self.name} v{self.version}"
+        return True

@@ -1,156 +1,88 @@
 """
-Tests para las funcionalidades de auto-registro de handlers del KMC Parser.
+Tests para el sistema de auto-registro del KMC Parser.
 """
 import unittest
 import tempfile
 import os
-from ..parser import KMCParser
+from pathlib import Path
+
+# Cambiar importaciones relativas por absolutas
+from kmc_parser.parser import KMCParser
+from kmc_parser.core import registry
 
 class TestAutoRegister(unittest.TestCase):
     def setUp(self):
-        """Configuración inicial para cada test."""
+        # Limpiar el registro antes de cada prueba
+        registry.clear_handlers()
+        registry.clear_plugins()
+        
+        self.test_dir = tempfile.mkdtemp()
         self.parser = KMCParser()
         
-        # Crear un archivo temporal con contenido KMC para pruebas
-        self.temp_file = tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.md')
-        self.temp_file.write("""# [[project:nombre]] v[{doc:version}]
+        # Registrar algunos handlers básicos para las pruebas
+        registry.register_context_handler("project", lambda var: {
+            "nombre": "Test Process",
+            "version": "v1.0-test-process"
+        }.get(var, f"<project:{var}>"))
+        
+        registry.register_metadata_handler("doc", lambda var: {
+            "version": "1.0-test-process"
+        }.get(var, f"<doc:{var}>"))
+        
+        registry.register_generative_handler("ai:gpt4", lambda name, prompt, format_type=None: 
+            f"Contenido generado para {name}" + (f" en formato {format_type}" if format_type else ""))
 
-## Resumen Ejecutivo
-{{ai:gpt4:resumen}}
-<!-- KMC_DEFINITION FOR [{doc:resumen}]:
-GENERATIVE_SOURCE = {{ai:gpt4:extract_summary}}
-PROMPT = "Genera un resumen para [[project:nombre]]"
-FORMAT = "text/plain"
--->
-
-## Objetivos
-{{ai:gpt4:objetivos}}
-<!-- AI_PROMPT FOR {{ai:gpt4:objetivos}}: 
-Enumera los objetivos principales de [[project:nombre]]
--->
-
-## Contacto
-[[user:nombre]] ([[user:email]])
-
-## Conclusiones
-[{doc:resumen}]
-""")
-        self.temp_file.close()
-    
     def tearDown(self):
-        """Limpieza después de cada test."""
-        os.unlink(self.temp_file.name)
-    
-    def test_auto_register_handlers_file_native(self):
-        """Prueba del método auto_register_handlers (ahora nativo) con archivo markdown."""
-        parser = KMCParser() # Nueva instancia para cada prueba específica
-        stats = parser.auto_register_handlers(markdown_path=self.temp_file.name)
+        # Limpiar todo después de cada prueba
+        registry.clear_all()
         
-        self.assertIn("project", stats["context"])
-        self.assertIn("user", stats["context"])
-        self.assertIn("doc", stats["metadata"])
-        self.assertIn("ai:gpt4", stats["generative"])
-        
-        # Verificar que los handlers se registraron internamente
-        self.assertIn("project", parser.context_handlers)
-        self.assertIn("user", parser.context_handlers)
-        self.assertIn("doc", parser.metadata_handlers)
-        self.assertIn("ai:gpt4", parser.generative_handlers)
-    
-    def test_auto_register_handlers_content_native(self):
-        """Prueba del método auto_register_handlers (ahora nativo) con contenido markdown directo."""
-        parser = KMCParser()
-        content = """# [[project:nombre_test]]
-[{doc:version_test}]
-{{ai:gpt4:test_content_var}}"""
-        
-        stats = parser.auto_register_handlers(markdown_content=content)
-        
-        self.assertIn("project", stats["context"])
-        self.assertIn("doc", stats["metadata"])
-        self.assertIn("ai:gpt4", stats["generative"])
-        self.assertIn("project", parser.context_handlers)
-        self.assertIn("doc", parser.metadata_handlers)
-        self.assertIn("ai:gpt4", parser.generative_handlers)
-    
-    def test_auto_register_with_default_handlers_native(self):
-        """Prueba del auto-registro (nativo) con handlers predefinidos."""
-        parser = KMCParser()
-        custom_handlers = {
-            "context": {
-                "project": lambda var_name: "Proyecto Test Custom"
-            },
-            "metadata": {
-                "doc": lambda var_name: "v1.0-test-custom"
-            },
-            "generative": {
-                "ai:gpt4": lambda var_obj: f"Custom AI content for {var_obj.name}"
-            }
-        }
-        
-        parser.auto_register_handlers(
-            markdown_path=self.temp_file.name,
-            default_handlers=custom_handlers
-        )
-        
-        self.assertEqual(parser.context_handlers["project"]("nombre"), "Proyecto Test Custom")
-        self.assertEqual(parser.metadata_handlers["doc"]("version"), "v1.0-test-custom")
-        
-        # Para probar el handler generativo, necesitamos simular una variable generativa
-        from kmc_parser.models import GenerativeVariable
-        test_gen_var = GenerativeVariable(category="ai", subtype="gpt4", name="resumen")
-        self.assertEqual(parser.generative_handlers["ai:gpt4"](test_gen_var), "Custom AI content for resumen")
+        if os.path.exists(self.test_dir):
+            import shutil
+            shutil.rmtree(self.test_dir)
 
     def test_process_document_native(self):
-        """Prueba del método simplificado process_document (con auto-registro nativo)."""
-        parser = KMCParser()
-        custom_handlers = {
-            "context": {
-                "project": lambda var_name: "Proyecto Test Process" if var_name == "nombre" else f"<project:{var_name}>",
-                "user": lambda var_name: "Usuario Test Process" if var_name == "nombre" else f"<user:{var_name}>"
-            },
-            "metadata": {
-                "doc": lambda var_name: "v1.0-test-process" if var_name == "version" else f"<doc:{var_name}>"
-            },
-            "generative": {
-                # Este handler se usará para la KMC_DEFINITION de [{doc:resumen}]
-                "ai:gpt4:extract_summary": lambda var_obj: f"Resumen generado para {var_obj.prompt}", 
-                # Este handler se usará para {{ai:gpt4:objetivos}} que tiene un AI_PROMPT
-                "ai:gpt4:objetivos": lambda var_obj: f"Objetivos generados para {var_obj.prompt}" 
-            }
-        }
-        
-        resultado = parser.process_document(
-            markdown_path=self.temp_file.name,
-            default_handlers=custom_handlers
-        )
-        
+        """Prueba el procesamiento de un documento con handlers registrados"""
+        contenido_test = """# Proyecto [[project:nombre]] [[project:version]]
+
+<!-- KMC_DEFINITION FOR [{doc:resumen}]:
+GENERATIVE_SOURCE = {{ai:gpt4:resumen}}
+PROMPT = "Genera un resumen para el proyecto [[project:nombre]]"
+FORMAT = "markdown"
+-->
+
+## Resumen
+[{doc:resumen}]
+"""
+        resultado = self.parser.render(contenido_test)
         self.assertIn("# Proyecto Test Process v1.0-test-process", resultado)
-        self.assertIn("Usuario Test Process", resultado)
-        # Verificamos que el contenido de la KMC_DEFINITION se haya renderizado
-        self.assertIn("Resumen generado para Genera un resumen para Proyecto Test Process", resultado)
-        # Verificamos que el contenido del AI_PROMPT se haya renderizado (aunque la variable {{}} no se muestra)
-        # El handler de {{ai:gpt4:objetivos}} no se invoca directamente en el renderizado final,
-        # sino que su prompt se resuelve. Las variables generativas no se reemplazan directamente.
-        # Por lo tanto, no buscamos "Objetivos generados para..." en el resultado final.
-        self.assertNotIn("{{ai:gpt4", resultado) 
-        self.assertNotIn("<!-- KMC_DEFINITION", resultado)
-        self.assertNotIn("<!-- AI_PROMPT", resultado)
+        self.assertIn("Contenido generado para resumen en formato markdown", resultado)
+        # La variable generativa no debe aparecer en el resultado final
+        self.assertNotIn("{{ai:gpt4:resumen}}", resultado)
+        # Los comentarios de definición deben eliminarse
+        self.assertNotIn("KMC_DEFINITION", resultado)
 
     def test_process_document_no_custom_handlers(self):
-        """Prueba process_document sin handlers personalizados, usando solo genéricos."""
-        parser = KMCParser()
-        resultado = parser.process_document(markdown_path=self.temp_file.name)
+        """Prueba el procesamiento sin handlers personalizados"""
+        # Limpiar el registro para esta prueba
+        registry.clear_all()
+        
+        contenido_test = """# Proyecto [[project:nombre]] v[{doc:version}]
 
-        # Verificar que los placeholders genéricos están presentes
-        self.assertIn("# <project:nombre> v<doc:version>", resultado)
-        self.assertIn("<user:nombre> (<user:email>)", resultado)
-        # La KMC_DEFINITION usará un handler genérico para la fuente generativa
-        # y el prompt también usará placeholders para las variables internas.
-        self.assertIn("<Contenido generativo para ai:gpt4:extract_summary>", resultado)
-        self.assertNotIn("{{ai:gpt4", resultado)
-        self.assertNotIn("<!-- KMC_DEFINITION", resultado)
-        self.assertNotIn("<!-- AI_PROMPT", resultado)
+{{ai:gpt4:resumen}}
+<!-- KMC_DEFINITION FOR [{doc:analisis}]:
+GENERATIVE_SOURCE = {{ai:gpt4:analisis}}
+PROMPT = "Analiza los datos del proyecto"
+-->
 
-if __name__ == '__main__':
-    unittest.main()
+## Análisis
+[{doc:analisis}]
+"""
+        # Sin handlers registrados, las variables deben quedarse como están
+        resultado = self.parser.render(contenido_test)
+        self.assertIn("# Proyecto [[project:nombre]] v[{doc:version}]", resultado)
+        # Las variables generativas nunca se renderizan directamente
+        self.assertIn("{{ai:gpt4:resumen}}", resultado)
+        # Las variables de metadata sin handlers registrados permanecen igual
+        self.assertIn("[{doc:analisis}]", resultado)
+        # Los comentarios de definición deben eliminarse
+        self.assertNotIn("KMC_DEFINITION", resultado)

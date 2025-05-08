@@ -61,3 +61,65 @@ El mecanismo de autodetección se activa por defecto cuando se instancia `KMCPar
 
 Para aprender cómo implementar tus propias extensiones autodetectables, consulta el siguiente tutorial:
 *   [Tutorial: Creación de Extensiones Autodetectables en KMC](./auto_discovery/implementation.md)
+
+## 7. Plan de Seguimiento a la Implementación
+
+*Fecha de última actualización: 7 de mayo de 2025*
+
+Para finalizar la implementación y lanzar esta funcionalidad como un repositorio abierto en GitHub, se ha establecido el siguiente plan de tareas pendientes:
+
+### 7.1. Componentes Técnicos Pendientes
+
+* **Tests Unitarios**:
+  * Crear `tests/test_auto_discovery.py` con pruebas específicas para la autodetección
+  * Incluir casos para diferentes directorios y estructuras de proyecto
+  * Probar el manejo de errores con extensiones malformadas
+
+* **Mejoras de Robustez**:
+  * Mejorar el manejo de errores en `ExtensionDiscovery`
+  * Implementar sistema de logging detallado para facilitar depuración
+  * Garantizar compatibilidad entre diferentes sistemas operativos
+
+### 7.2. Optimizaciones Propuestas
+
+* **Caché de Descubrimiento**:
+  * Implementar un sistema de caché para evitar re-escanear constantemente los directorios
+  * Añadir detección de cambios para recargar solo cuando sea necesario
+
+* **Lazy Loading**:
+  * Modificar el sistema para cargar extensiones solo cuando se necesiten
+  * Priorizar el rendimiento en proyectos con muchas extensiones
+
+### 7.3. Documentación y Ejemplos
+
+* **Ejemplos Avanzados**:
+  * Expandir los ejemplos en `examples/expansible_architecture/`
+  * Crear ejemplos de integración con frameworks populares
+
+* **Diagramas y Visuales**:
+  * Agregar diagramas de flujo del proceso de autodetección
+  * Ilustrar la arquitectura de plugins y su integración
+
+* **Plantillas y Buenas Prácticas**:
+  * Crear plantillas para diferentes tipos de extensiones
+  * Documentar patrones recomendados para crear extensiones eficientes
+
+### 7.4. Preparación para GitHub
+
+* **Repositorio Público**:
+  * Configurar estructura de repositorio con archivos estándar (CONTRIBUTING.md, CODE_OF_CONDUCT.md)
+  * Implementar GitHub Actions para CI/CD automático
+  * Crear sistema de etiquetas para issues relacionados con extensiones
+
+* **Comunidad**:
+  * Establecer directrices para contribuciones de extensiones
+  * Crear un índice/registro de extensiones de la comunidad
+
+### 7.5. Cronograma Tentativo
+
+* **Fase 1 (Componentes Técnicos)**: 1-2 semanas
+* **Fase 2 (Documentación)**: 1 semana
+* **Fase 3 (Preparación GitHub)**: 3-5 días
+* **Fase 4 (Lanzamiento)**: 1 semana
+
+**Fecha estimada de lanzamiento**: Finales de mayo 2025
