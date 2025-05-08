@@ -111,20 +111,40 @@ class ExtensionDiscovery:
                     self._processed_modules.add(module_path)
                     
                     try:
-                        spec = importlib.util.spec_from_file_location(module_name, module_path)
-                        if spec is None:
-                            self.logger.warning(f"No se pudo cargar especificación para: {module_path}")
-                            continue
-                            
-                        module = importlib.util.module_from_spec(spec)
+                        # Determinar el nombre completo del módulo basado en la estructura de paquetes
+                        rel_path = os.path.relpath(module_path, os.path.dirname(os.path.dirname(__file__)))
+                        package_path = os.path.dirname(rel_path).replace(os.sep, ".")
+                        full_module_name = f"kmc_parser.{package_path}.{module_name}" if package_path else f"kmc_parser.{module_name}"
                         
-                        # Capturar salidas y excepciones durante la ejecución del módulo
+                        self.logger.debug(f"Cargando módulo como: {full_module_name}")
+                        
+                        # Intentar primero la importación basada en el nombre del módulo
                         try:
-                            spec.loader.exec_module(module)
-                        except Exception as e:
-                            self.logger.error(f"Error al ejecutar módulo {module_path}: {str(e)}")
-                            self.logger.debug(traceback.format_exc())
-                            continue
+                            module = importlib.import_module(full_module_name)
+                            self.logger.debug(f"Módulo cargado mediante importlib.import_module: {full_module_name}")
+                        except (ImportError, ModuleNotFoundError):
+                            # Si falla, caer en el método anterior
+                            self.logger.debug(f"Fallback a spec_from_file_location para: {module_path}")
+                            spec = importlib.util.spec_from_file_location(full_module_name, module_path)
+                            if spec is None:
+                                self.logger.warning(f"No se pudo cargar especificación para: {module_path}")
+                                continue
+                                
+                            module = importlib.util.module_from_spec(spec)
+                            
+                            # Configurar el contexto de paquete para importaciones relativas
+                            sys.modules[full_module_name] = module
+                            
+                            # Capturar salidas y excepciones durante la ejecución del módulo
+                            try:
+                                spec.loader.exec_module(module)
+                            except Exception as e:
+                                # Limpiar el módulo parcialmente cargado
+                                if full_module_name in sys.modules:
+                                    del sys.modules[full_module_name]
+                                self.logger.error(f"Error al ejecutar módulo {module_path}: {str(e)}")
+                                self.logger.debug(traceback.format_exc())
+                                continue
 
                         # Buscar handlers en el módulo
                         for name, obj in vars(module).items():
@@ -166,19 +186,39 @@ class ExtensionDiscovery:
                     self._processed_modules.add(module_path)
                     
                     try:
-                        spec = importlib.util.spec_from_file_location(module_name, module_path)
-                        if spec is None:
-                            self.logger.warning(f"No se pudo cargar especificación para: {module_path}")
-                            continue
-                            
-                        module = importlib.util.module_from_spec(spec)
+                        # Determinar el nombre completo del módulo basado en la estructura de paquetes
+                        rel_path = os.path.relpath(module_path, os.path.dirname(os.path.dirname(__file__)))
+                        package_path = os.path.dirname(rel_path).replace(os.sep, ".")
+                        full_module_name = f"kmc_parser.{package_path}.{module_name}" if package_path else f"kmc_parser.{module_name}"
                         
+                        self.logger.debug(f"Cargando plugin como: {full_module_name}")
+                        
+                        # Intentar primero la importación basada en el nombre del módulo
                         try:
-                            spec.loader.exec_module(module)
-                        except Exception as e:
-                            self.logger.error(f"Error al ejecutar módulo {module_path}: {str(e)}")
-                            self.logger.debug(traceback.format_exc())
-                            continue
+                            module = importlib.import_module(full_module_name)
+                            self.logger.debug(f"Plugin cargado mediante importlib.import_module: {full_module_name}")
+                        except (ImportError, ModuleNotFoundError):
+                            # Si falla, caer en el método anterior
+                            self.logger.debug(f"Fallback a spec_from_file_location para plugin: {module_path}")
+                            spec = importlib.util.spec_from_file_location(full_module_name, module_path)
+                            if spec is None:
+                                self.logger.warning(f"No se pudo cargar especificación para: {module_path}")
+                                continue
+                                
+                            module = importlib.util.module_from_spec(spec)
+                            
+                            # Configurar el contexto de paquete para importaciones relativas
+                            sys.modules[full_module_name] = module
+                            
+                            try:
+                                spec.loader.exec_module(module)
+                            except Exception as e:
+                                # Limpiar el módulo parcialmente cargado
+                                if full_module_name in sys.modules:
+                                    del sys.modules[full_module_name]
+                                self.logger.error(f"Error al ejecutar módulo {module_path}: {str(e)}")
+                                self.logger.debug(traceback.format_exc())
+                                continue
 
                         # Buscar plugins en el módulo (clases que heredan de KMCPlugin)
                         for name, obj in vars(module).items():

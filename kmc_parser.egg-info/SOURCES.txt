@@ -28,8 +28,8 @@ kmc_parser/handlers/metadata/__init__.py
 kmc_parser/handlers/metadata/doc.py
 kmc_parser/integrations/__init__.py
 kmc_parser/integrations/itscop.py
-kmc_parser/integrations/llamaindex.py
 kmc_parser/tests/__init__.py
 kmc_parser/tests/test_auto_register.py
 kmc_parser/tests/test_parser.py
+tests/test_hello_world.py
 tests/test_variable_definition.py

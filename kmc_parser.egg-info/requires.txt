@@ -1,5 +1,7 @@
 regex>=2022.1.18
 llama-index>=0.8.0
+psycopg2-binary==2.9.9
+llama-index-vector-stores-supabase
 
 [crewai]
 crewai>=0.1.0
@@ -9,6 +11,9 @@ pytest>=7.0.0
 black>=22.1.0
 isort>=5.10.1
 mypy>=0.941
+llama-index-llms-azure-openai
+llama-index-embeddings-azure-openai
+supabase
 
 [langchain]
 langchain>=0.0.200

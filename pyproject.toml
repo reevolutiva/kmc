@@ -7,7 +7,7 @@ name = "kmc-parser"
 version = "0.1.0"
 description = "Kimfe Markdown Convention Parser - Un parser para plantillas inteligentes con LLMs"
 authors = [
-    {name = "Kimfe Team", email = "info@kimfe.com"}
+    {name = "Kimfe Team", email = "giorgio@reevolutiva.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.8"
@@ -37,6 +37,9 @@ dev = [
     "black>=22.1.0",
     "isort>=5.10.1", 
     "mypy>=0.941",
+    "llama-index-llms-azure-openai",
+    "llama-index-embeddings-azure-openai",
+    "supabase",
 ]
 langchain = [
     "langchain>=0.0.200",

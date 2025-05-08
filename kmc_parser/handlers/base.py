@@ -15,9 +15,10 @@ from ..core import registry
 class BaseHandler(ABC):
     """Clase base abstracta para todos los handlers de variables KMC."""
     
-    def __init__(self):
-        """Inicializa el handler con configuración básica de logging."""
+    def __init__(self, context=None):
+        """Inicializa el handler con configuración básica de logging y contexto opcional."""
         self.logger = logging.getLogger(f"kmc.handler.{self.__class__.__name__}")
+        self.context = context or {}
 
 
 class ContextHandler(BaseHandler):
@@ -180,7 +181,8 @@ def context_handler(var_type: str):
         # Registrar una instancia del handler si no es una clase abstracta
         if not getattr(cls, "__abstractmethod__", False):
             try:
-                handler_instance = cls()
+                # Pasamos un contexto vacío por defecto
+                handler_instance = cls({})
                 registry.register_context_handler(var_type, handler_instance)
             except Exception as e:
                 logger = logging.getLogger("kmc.handlers")
@@ -205,7 +207,8 @@ def metadata_handler(var_type: str):
         # Registrar una instancia del handler si no es una clase abstracta
         if not getattr(cls, "__abstractmethod__", False):
             try:
-                handler_instance = cls()
+                # Pasamos un contexto vacío por defecto
+                handler_instance = cls({})
                 registry.register_metadata_handler(var_type, handler_instance)
             except Exception as e:
                 logger = logging.getLogger("kmc.handlers")
@@ -236,7 +239,8 @@ def generative_handler(var_type: str):
         # Registrar una instancia del handler si no es una clase abstracta
         if not getattr(cls, "__abstractmethod__", False):
             try:
-                handler_instance = cls()
+                # Pasamos un contexto vacío por defecto
+                handler_instance = cls({})
                 registry.register_generative_handler(var_type, handler_instance)
             except Exception as e:
                 logger = logging.getLogger("kmc.handlers")

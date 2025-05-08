@@ -2,7 +2,7 @@ Metadata-Version: 2.4
 Name: kmc-parser
 Version: 0.1.0
 Summary: Kimfe Markdown Convention Parser - Un parser para plantillas inteligentes con LLMs
-Author-email: Kimfe Team <info@kimfe.com>
+Author-email: Kimfe Team <giorgio@reevolutiva.com>
 Project-URL: Homepage, https://kimfe.com
 Keywords: markdown,llm,template,ai,kimfe
 Classifier: Development Status :: 3 - Alpha
@@ -17,11 +17,16 @@ Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: regex>=2022.1.18
 Requires-Dist: llama-index>=0.8.0
+Requires-Dist: psycopg2-binary==2.9.9
+Requires-Dist: llama-index-vector-stores-supabase
 Provides-Extra: dev
 Requires-Dist: pytest>=7.0.0; extra == "dev"
 Requires-Dist: black>=22.1.0; extra == "dev"
 Requires-Dist: isort>=5.10.1; extra == "dev"
 Requires-Dist: mypy>=0.941; extra == "dev"
+Requires-Dist: llama-index-llms-azure-openai; extra == "dev"
+Requires-Dist: llama-index-embeddings-azure-openai; extra == "dev"
+Requires-Dist: supabase; extra == "dev"
 Provides-Extra: langchain
 Requires-Dist: langchain>=0.0.200; extra == "langchain"
 Provides-Extra: crewai
@@ -198,109 +203,85 @@ pip install -e ".[langchain,crewai]"
 
 ## Uso básico | Basic Usage
 
-El KMC Parser ahora incorpora una arquitectura expandible que facilita la extensión del sistema y la integración de nuevas funcionalidades a través del registro centralizado y el sistema de plugins.
+KMC implementa una arquitectura expandible con autodetección de extensiones. Esta funcionalidad simplifica notablemente la integración de nuevos handlers, plugins y funcionalidades sin necesidad de modificar el código base.
 
-*The KMC Parser now incorporates an expandable architecture that facilitates system extension and integration of new functionalities through the centralized registry and plugin system.*
+*KMC implements an expandable architecture with extension autodetection. This functionality significantly simplifies the integration of new handlers, plugins, and features without the need to modify the base code.*
 
-### Uso simple con registro automático | Simple usage with automatic registration
+### Uso básico del parser con autodetección | Basic parser usage with autodetection
 
 ```python
 from kmc_parser import KMCParser
 
-# Crear el parser | Create the parser
+# Inicializar el parser con autodetección habilitada (comportamiento por defecto)
+# Initialize the parser with autodetection enabled (default behavior)
 parser = KMCParser()
 
-# Contenido del documento KMC | KMC document content
+# Ejemplo de documento KMC | KMC document example
 documento_markdown = """
 # Proyecto: [[project:nombre]]
-Tipo: [[project:tipo]]
-Versión del Documento: [{doc:version}]
 Autor: [[user:nombre]]
 
 ## Resumen Ejecutivo
 <!-- KMC_DEFINITION FOR [{doc:resumen_ejecutivo}]:
 GENERATIVE_SOURCE = {{ai:gpt4:generar_resumen}}
-PROMPT = "Crear un resumen ejecutivo para el proyecto [[project:nombre]] sobre [[project:tipo]]."
+PROMPT = "Crear un resumen ejecutivo para el proyecto [[project:nombre]]."
 -->
 [{doc:resumen_ejecutivo}]
-
-## Tareas Pendientes
-{{ai:gpt4:listar_tareas}}
-<!-- AI_PROMPT FOR {{ai:gpt4:listar_tareas}}:
-Listar tareas pendientes para un proyecto de [[project:tipo]].
--->
 
 Este documento fue generado por [[user:nombre]].
 """
 
-# El parser registrará automáticamente los handlers necesarios
-stats = parser.auto_register_handlers(markdown_content=documento_markdown)
-
-# También puedes proporcionar handlers personalizados
-custom_handlers = {
-    "context": {
-        "project": lambda var_name: {
-            "nombre": "Proyecto KMC Expandible",
-            "tipo": "Arquitectura de SDK"
-        }.get(var_name, f"<project:{var_name}>"),
-        "user": lambda var_name: "Usuario Principal" if var_name == "nombre" else f"<user:{var_name}>"
+# Procesamiento del documento con handlers personalizados
+# Document processing with custom handlers
+resultado = parser.process_document(
+    markdown_content=documento_markdown,
+    default_handlers={
+        "context": {
+            "project": lambda var_name: "Proyecto KMC" if var_name == "nombre" else f"<project:{var_name}>",
+            "user": lambda var_name: "Usuario Principal" if var_name == "nombre" else f"<user:{var_name}>"
+        },
+        "generative": {
+            "ai:gpt4": lambda var: f"[Contenido generado para: {var.prompt}]"
+        }
     }
-}
-
-# Procesar el documento
-resultado_renderizado = parser.process_document(
-    markdown_content=documento_markdown, 
-    default_handlers=custom_handlers
 )
-print(resultado_renderizado)
+print(resultado)
 ```
 
-### Uso avanzado con handlers y plugins | Advanced usage with handlers and plugins
+## Extendiendo KMC con Autodetección | Extending KMC with Autodetection
+
+La forma recomendada de extender KMC es aprovechando su sistema de autodetección de extensiones:
+
+*The recommended way to extend KMC is by leveraging its extension autodetection system:*
+
+### 1. Creación de Extensiones Autodetectables | Creating Autodetectable Extensions
+
+Para crear una extensión que sea detectada automáticamente, simplemente coloque su archivo en uno de los directorios de extensiones (`extensions/`, `user_extensions/`, `custom_handlers/` o `plugins/`).
+
+*To create an extension that is automatically detected, simply place your file in one of the extension directories (`extensions/`, `user_extensions/`, `custom_handlers/` or `plugins/`).*
 
 ```python
-from kmc_parser import KMCParser, registry, ContextHandler, plugin_manager
+# archivo: user_extensions/mi_handler_cliente.py
 
-# Creando un handler personalizado
-class ProjectHandler(ContextHandler):
-    def __init__(self, config=None):
-        super().__init__(config)
-        self.project_data = self.config.get("project_data", {
-            "nombre": "Proyecto KMC",
-            "tipo": "SDK para procesamiento de documentos",
-            "estado": "En desarrollo"
-        })
-    
-    def _get_context_value(self, var_name):
-        return self.project_data.get(var_name, f"<project:{var_name}>")
-
-# Registrando el handler en el registro central
-registry.register_context_handler("project", ProjectHandler())
-
-# El parser utilizará automáticamente los handlers registrados
-parser = KMCParser()
-resultado = parser.process_document(markdown_content=documento_markdown)
-```
-
-## Extendiendo KMC | Extending KMC
-
-La arquitectura expandible de KMC facilita la creación de extensiones:
-*The expandable architecture of KMC facilitates creating extensions:*
-
-1. **Crear un handler personalizado | Create a custom handler**
-```python
-from kmc_parser import ContextHandler, context_handler
+from kmc_parser.handlers.base import ContextHandler, context_handler
 
 @context_handler("cliente")
 class ClienteHandler(ContextHandler):
     """Handler para variables contextuales de cliente [[cliente:nombre]]"""
     
     def _get_context_value(self, var_name):
-        # Implementar lógica para obtener datos del cliente
-        return f"Valor para cliente:{var_name}"
+        datos_cliente = {
+            "nombre": "Cliente Principal",
+            "contacto": "cliente@example.com"
+        }
+        return datos_cliente.get(var_name, f"<cliente:{var_name}>")
 ```
 
-2. **Crear un plugin completo | Create a complete plugin**
+### 2. Crear un Plugin Completo | Create a Complete Plugin
+
 ```python
+# archivo: plugins/weather_plugin.py
+
 from kmc_parser import KMCPlugin, registry
 from kmc_parser.handlers.base import GenerativeHandler
 
@@ -311,13 +292,26 @@ class ApiWeatherHandler(GenerativeHandler):
 
 class WeatherPlugin(KMCPlugin):
     def initialize(self):
-        self.register_handlers()
-        return True
-    
-    def register_handlers(self):
         weather_handler = ApiWeatherHandler()
         registry.register_generative_handler("api:weather", weather_handler)
-        return 1
+        return True
+```
+
+### 3. Verificar Extensiones Cargadas | Verify Loaded Extensions
+
+```python
+from kmc_parser import KMCParser
+from kmc_parser.extensions.auto_discovery import ExtensionDiscovery
+from kmc_parser.core import registry
+
+# Ver qué extensiones se han descubierto
+discovery = ExtensionDiscovery()
+stats = discovery.discover_all_extensions()
+print(f"Extensiones descubiertas: {stats}")
+
+# Verificar handlers registrados
+print(f"Handlers contextuales: {list(registry.context_handlers.keys())}")
+print(f"Handlers generativos: {list(registry.generative_handlers.keys())}")
 ```
 
 Para más ejemplos de extensión de KMC, consulte la carpeta `examples/expansible_architecture/`.
@@ -339,8 +333,8 @@ El directorio `examples/` contiene varios ejemplos de uso:
   *Integration with the frontend*
 - `quick_start/`: Ejemplos básicos para empezar a usar KMC  
   *Basic examples to start using KMC*
-- `expansible_architecture/`: Ejemplos de uso de la nueva arquitectura expandible  
-  *Examples of using the new expandable architecture*
+- `expansible_architecture/`: Ejemplos de uso de la arquitectura expandible con autodetección  
+  *Examples of using the expandable architecture with autodetection*
 
 ## Flujo de trabajo y arquitectura | Workflow and Architecture
 
@@ -367,30 +361,23 @@ KMC está diseñado para proporcionar un flujo de trabajo claro y modular para d
    Responsable: [[user:nombre]] ([[user:email]])
    ```
 
-2. **Preparar el KMC Parser y definir handlers personalizados (opcional)**  
-   *Set up the KMC Parser and define custom handlers (optional)*
+2. **Preparar el KMC Parser con autodetección de extensiones**  
+   *Set up the KMC Parser with extension autodetection*
    ```python
    from kmc_parser import KMCParser
 
+   # El parser detectará automáticamente las extensiones disponibles
    parser = KMCParser()
 
-   # Opcional: Define handlers personalizados si necesitas un comportamiento específico.
-   # Si no, el parser usará handlers genéricos (placeholders).
-   # Optional: Define custom handlers if you need specific behavior.
-   # Otherwise, the parser will use generic (placeholder) handlers.
+   # Opcionalmente, definir handlers personalizados para comportamientos específicos
    custom_handlers = {
        "context": {
            "project": lambda var_name: {
-               "nombre": "Proyecto Demo Workflow",
-               "tipo": "Análisis de Mercado Avanzado"
+               "nombre": "Proyecto Demo",
+               "tipo": "Análisis de Mercado"
            }.get(var_name, f"<project:{var_name}>"),
-           "user": lambda var_name: "Giorgio" if var_name == "nombre" else \
-                                 "giorgio@reevolutiva.com" if var_name == "email" else f"<user:{var_name}>"
-       },
-       "generative": {
-           "ai:gpt4": lambda var: f"[Contenido AI para '{var.name}' con prompt: '{var.prompt}']"
+           "user": lambda var_name: "Giorgio" if var_name == "nombre" else "giorgio@example.com"
        }
-       # Añade otros handlers para 'metadata' o más tipos si es necesario
    }
    ```
 
@@ -400,14 +387,135 @@ KMC está diseñado para proporcionar un flujo de trabajo claro y modular para d
    with open("plantilla.md", "r", encoding="utf-8") as f:
        contenido_markdown = f.read()
 
-   # Procesa el documento. Los handlers se registran automáticamente.
-   # Process the document. Handlers are registered automatically.
+   # Procesa el documento con autodetección de extensiones
    resultado_renderizado = parser.process_document(
        markdown_content=contenido_markdown,
-       default_handlers=custom_handlers # Pasa tus handlers personalizados aquí
+       default_handlers=custom_handlers  # Opcional: handlers personalizados
    )
    print(resultado_renderizado)
    ```
+
+## Autodetección de Extensiones | Extension Autodetection
+
+KMC incluye una capacidad de autodetección de extensiones que permite a los desarrolladores simplemente colocar sus archivos de extensión en directorios específicos sin necesidad de modificar manualmente el código base o registrar explícitamente cada handler o plugin.
+
+*KMC includes an extension autodetection capability allowing developers to simply place their extension files in specific directories without needing to manually modify the base code or explicitly register each handler or plugin.*
+
+### Componentes Principales del Sistema de Autodetección | Main Autodetection System Components
+
+#### 1. Sistema de Descubrimiento de Extensiones (`ExtensionDiscovery`)
+
+Este componente central se encarga de:
+*This central component is responsible for:*
+
+- Escanear directorios predefinidos en busca de extensiones  
+  *Scanning predefined directories for extensions*
+- Detectar clases que implementen las interfaces de handlers o plugins  
+  *Detecting classes that implement handler or plugin interfaces*
+- Registrar automáticamente los handlers y plugins encontrados  
+  *Automatically registering the discovered handlers and plugins*
+- Proporcionar información sobre las extensiones cargadas  
+  *Providing information about loaded extensions*
+
+Ubicación | Location: `kmc_parser/extensions/auto_discovery.py`
+
+#### 2. Directorios Estandarizados | Standardized Directories
+
+El sistema busca extensiones en los siguientes directorios:
+*The system looks for extensions in the following directories:*
+
+- `extensions/`: Extensiones propias del SDK  
+  *SDK's own extensions*
+- `user_extensions/`: Extensiones creadas por usuarios  
+  *User-created extensions*
+- `custom_handlers/`: Handlers personalizados  
+  *Custom handlers*
+- `plugins/`: Plugins adicionales  
+  *Additional plugins*
+
+#### 3. Integración con KMCParser | Integration with KMCParser
+
+La clase `KMCParser` incluye:
+*The `KMCParser` class includes:*
+
+- Opción `auto_discover` en el constructor (habilitada por defecto)  
+  *`auto_discover` option in the constructor (enabled by default)*
+- Posibilidad de especificar directorios adicionales para buscar extensiones  
+  *Ability to specify additional directories to look for extensions*
+- Método `_auto_discover_extensions()` que ejecuta el proceso de descubrimiento  
+  *`_auto_discover_extensions()` method that executes the discovery process*
+
+```python
+# Inicializar el parser con autodescubrimiento habilitado (por defecto)
+# Initialize the parser with autodiscovery enabled (by default)
+parser = KMCParser()
+
+# O especificar un directorio personalizado
+# Or specify a custom directory
+parser = KMCParser(auto_discover=True, ext_directory="/ruta/personalizada")
+```
+
+### Implementación de Extensiones Autodetectables | Implementing Autodetectable Extensions
+
+Para crear extensiones que sean detectables automáticamente:
+*To create extensions that are automatically detectable:*
+
+#### Handlers Autodetectables | Autodetectable Handlers
+
+```python
+from kmc_parser.handlers.base import ContextHandler, context_handler
+
+@context_handler("mi_contexto")  # Decorador que registra el handler
+class MiContextHandler(ContextHandler):
+    """Handler para variables contextuales [[mi_contexto:nombre]]"""
+    
+    def _get_context_value(self, var_name):
+        return f"Valor para {var_name}"
+
+# Al guardar este archivo en 'user_extensions/' o 'custom_handlers/', 
+# será detectado automáticamente al iniciar el parser.
+```
+
+#### Plugins Autodetectables | Autodetectable Plugins
+
+```python
+from kmc_parser.extensions.plugin_base import KMCPlugin
+from kmc_parser.core import registry
+
+class MiPlugin(KMCPlugin):
+    """Un plugin personalizado que se registra automáticamente"""
+    
+    def initialize(self):
+        registry.register_context_handler("mi_plugin_ctx", 
+                                         lambda var: f"Valor de plugin para {var}")
+        return True
+
+# Al guardar este archivo en 'plugins/' o 'extensions/',
+# será detectado automáticamente al iniciar el parser.
+```
+
+### Verificación de Descubrimiento | Discovery Verification
+
+Para verificar qué extensiones se han descubierto:
+*To verify which extensions have been discovered:*
+
+```python
+from kmc_parser import KMCParser
+from kmc_parser.extensions.auto_discovery import ExtensionDiscovery
+
+# Ver estadísticas de descubrimiento
+discovery = ExtensionDiscovery()
+stats = discovery.discover_all_extensions()
+print(f"Extensiones descubiertas: {stats}")  # {'handlers': 5, 'plugins': 2}
+
+# Las extensiones descubiertas se registran automáticamente en el registro central
+from kmc_parser.core import registry
+print(f"Handlers contextuales registrados: {list(registry.context_handlers.keys())}")
+```
+
+Para más ejemplos y usos avanzados, consulte los archivos en `examples/expansible_architecture/`.
+*For more examples and advanced uses, check the files in `examples/expansible_architecture/`.*
+
 ## Reutilización de variables y métodos por proyecto | Reuse of Variables and Methods by Project
 
 El SDK de KMC permite a los desarrolladores gestionar variables y métodos de manera centralizada:  
@@ -454,6 +562,9 @@ El SDK de KMC permite a los desarrolladores gestionar variables y métodos de ma
 
 - **07/05/2025**: Actualización de la documentación para incluir soporte bilingüe (español/inglés) y clarificar la nueva sintaxis KMC_DEFINITION.  
   *Documentation update to include bilingual support (Spanish/English) and clarify the new KMC_DEFINITION syntax.*
+  
+- **07/05/2025**: Mejora en la documentación para enfocarse exclusivamente en el sistema de autodetección de extensiones como el método estándar.
+  *Documentation improvement to focus exclusively on the extension autodetection system as the standard method.*
   
 - **08/05/2025**: Mejoras en la lógica del modelo:  
   *Improvements in model logic:*
