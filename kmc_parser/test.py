@@ -8,23 +8,28 @@ parser = KMC_Parser_TemplateMaker(
         "instucciones": "Sigue las instrucciones del curso"
     },
     doc_data={
-         "version": "1.0.0",
-            "titulo": "Demostración de Arquitectura Expandible",
+        "version": "1.0.0",
+        "titulo": "Demostración de Arquitectura Expandible",
     }
 )
 
+
+form_data = {
+    "nombre": "Plantilla de IA",
+    "descripcion": "Plantilla para crear documentos de IA",
+    "objetivo": "Crear una plantilla para documentos de IA",
+    "instucciones": "Sigue las instrucciones para crear la plantilla"
+}
+
 markdown = """
-# [[project:nombre]]
-### [[project:descripcion]]
 
-
-<!-- KMC_DEFINITION FOR [{tool:tempalte_maker}]:
+<!-- KMC_DEFINITION FOR [{tool:tempalte_maker_1}]:
     GENERATIVE_SOURCE = {{tool:tempalte_maker}}
-    PROMPT = "NOMBRE:PROJECTO;DESCRIPCION:DESCRIPCION;OBJETIVO:OBJETIVO;INSTUCCIONES:INSTUCCIONES"
-    FORMAT = "text/plain; max_length=80"
+    PROMPT = "Genera una planitilla en formato KMC con las siguientes caracteristicas: Nombre: Plantilla de IA. Descripcion: Plantilla para crear documentos de IA. Objetivo: Crear una plantilla para documentos de IA. Instrucciones: Sigue las instrucciones para crear la plantilla."
+    FORMAT = "text/plain"
 --> 
 
-[{tool:tempalte_maker}]
+[{tool:tempalte_maker_1}]
 
 """
 

@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from kmc_parser.extensions.lib.llamaindex import LlamaIndexMiddleware
+import re
 from kmc_parser import (
     registry, 
     GenerativeHandler,
@@ -17,56 +18,96 @@ class KMC_TemplateMaker(GenerativeHandler):
     __kmc_handler_type__ = "generative"
     __kmc_var_type__ = "tool:tempalte_maker"
     
-    def make_template(self, options : MakeTemplateRequest ):
-        """
-        Create a template for KCM.
-        """
+    
+    def llm_request( sefl, query: str, prompt_path : str, options : dict = None ):
         
-        nombre = options.nombre
-        descripcion = options.descripcion
-        objetivo = options.objetivo
-        instucciones = options.instucciones
+        # Abrir docuemnto en ruta app/kmc/kmc_parser/prompts/kmc_template_constuctor.prompt.md
+        print(" prompt_path: ", prompt_path)
         
-        kmc_specs = ""
+        try:
+            
+            with open(prompt_path, "r") as f:
+                prompt_content = f.read() 
+                print("prompt config loaded successfully.")
+        except Exception as e:
+            print(f"Error: {e}")
+            return None
         
         prompt = f"""
-        Genera una plantilla siguiendo las especificaciones KCM Documentation.
+        {prompt_content}
         
-        {kmc_specs}
-        
-        Ahora te proporciono los detalles de la plantilla:
-        Nombre: {nombre}
-        Descripcion: {descripcion}
-        Objetivo: {objetivo}
-        Instrucciones: {instucciones}
+        {query}
         """
         
         llamaindexmiddleware = LlamaIndexMiddleware()
-        llm_reponse = llamaindexmiddleware.agent_query(prompt)
+        llm_reponse = llamaindexmiddleware.llm_query(prompt)
+         
+        return llm_reponse
+    
+    #def make_template(self, options : MakeTemplateRequest ):
+    def make_template(self, query : str ):
+        """
+        Create a template for KCM.
+        """
+    
+        kmc_specs_path = "/app/kmc/kmc_parser/prompts/kmc_template_constuctor.prompt.md"
+        
+        try:
+            llm_reponse = self.llm_request(query=query, prompt_path=kmc_specs_path)
+        except Exception as e:
+            print(f"Error: {e}")
+            return None
+        
+        return llm_reponse
+    
+    def revision_template(self, content: str):
+        """
+        Revisar el contenido de la plantilla generada.
+        """
+        
+        kmc_specs_path = "/app/kmc/kmc_parser/prompts/kmc_template_reviewer.prompt.md"
+        
+        try:
+            llm_reponse = self.llm_request(query=content, prompt_path=kmc_specs_path)
+        except Exception as e:
+            print(f"Error: {e}")
+            return None
         
         return llm_reponse
     
     def _generate_content(self, var):
         
         prompt = var.prompt
-        print(f"var: {var}")
+        print(f"prompt: {prompt}")
         
-        promptParsed = {
-            "nombre": "",
-            "descripcion": "",
-            "objetivo": "",
-            "instucciones": ""  
-        }
+        # Extract lines for Nombre, Descripcion, Objetivo, and Instrucciones using regex
+        #matches = re.findall(r"^(Nombre|Descripcion|Objetivo|Instrucciones):\s*(.+?)(?:\.\s|$)", prompt, re.MULTILINE)
+        
+        #print(f"matches: {matches}")
+
+        # Parse the matches into the promptParsed dictionary
+        #promptParsed = {key.lower(): value.strip() for key, value in matches}
+        
+        #print(f"promptParsed: {promptParsed}")
+        
+        # promptParsed = {
+        #     "nombre": "",
+        #     "descripcion": "",
+        #     "objetivo": "",
+        #     "instucciones": ""  
+        # }
       
         
-        options = MakeTemplateRequest(
-            nombre=promptParsed["nombre"],
-            descripcion=promptParsed["descripcion"],
-            objetivo=promptParsed["objetivo"],
-            instucciones=promptParsed["instucciones"]
-        )
+        # options = MakeTemplateRequest(
+        #     nombre=promptParsed["nombre"],
+        #     descripcion=promptParsed["descripcion"],
+        #     objetivo=promptParsed["objetivo"],
+        #     instucciones=promptParsed["instucciones"]
+        # )
         
-        content = self.make_template( options=options )
+        #content = self.make_template( options=options )
+        first_parse = self.make_template( prompt )
+        content = self.revision_template( first_parse )
         
         return content
 

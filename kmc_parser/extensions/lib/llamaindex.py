@@ -244,7 +244,15 @@ class LlamaIndexMiddleware:
         return response
     
     
-
+    def llm_query(self, query: str):
+        """
+        Query the LLM with a given query.
+        """
+        logging.info(f"LLM query initiated with query: {query}")
+        response = llm.complete(prompt=query)
+        logging.info(f"LLM query response: {response}")
+        return response.text if hasattr(response, "text") else str(response)
+    
     def agent_query(self, query: str):
         """
         Query the documents with a given query.
