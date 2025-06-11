@@ -261,6 +261,7 @@ class LlamaIndexMiddleware:
         #documents = self.load_documents(self.directory)
         index = self.get_index_from_db()
         response = self.query_index(index, query)
+        
         #logging.info(f"Agent query response: {response}")
         return response
     
