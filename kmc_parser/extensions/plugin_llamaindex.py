@@ -5,7 +5,7 @@ from typing import Dict, Any, Optional
 from ..handlers.base import GenerativeHandler
 from ..core.registry import registry
 from .lib.llamaindex import LlamaIndexMiddleware
-from kmc_parser import (
+from src.kmc.kmc_parser import (
     KMCParser, 
     registry, 
     plugin_manager, 
@@ -18,6 +18,7 @@ from kmc_parser import (
     KMCPlugin
 )
 
+@generative_handler("ai:llamaindex")
 class LlamaIndexQuery(GenerativeHandler):
     """
     Handler para generar eventos de calendario.
@@ -27,7 +28,23 @@ class LlamaIndexQuery(GenerativeHandler):
     __kmc_handler_type__ = "generative"
     __kmc_var_type__ = "tool:llamaindex"
     
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """
+        Inicializa el handler con configuración opcional.
+        
+        Args:
+            config: Configuración específica para el handler
+        """
+        super().__init__(config)
+        print("Inicializando LlamaIndex Query Handler...")
+    
     def _generate_content(self, var):
+        
+        print("ejecutando _generate_content")
+        prompt = var.prompt
+        print(f"prompt: {prompt}")
+        
+        
         llamaindex_middleware = LlamaIndexMiddleware()
         # Procesar el prompt asociado a la variable
         print("Cargando LlamaIndex Middleware para la consulta...")

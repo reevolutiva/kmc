@@ -4,7 +4,7 @@ import sys
 # Añadir la ruta principal al path para importar el paquete kmc_parser
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from kmc_parser import KMCParser
+from src.kmc.kmc_parser import KMCParser
 
 # Definir rutas
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), 'markdown_kmc.md')

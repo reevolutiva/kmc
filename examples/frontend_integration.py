@@ -12,8 +12,8 @@ from typing import Dict, Any, Optional
 # Añadir el directorio principal al path para importar módulos del proyecto
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from kmc_parser import KMCParser
-from kmc_parser.integrations.itscop import ITSCOPIntegration
+from src.kmc.kmc_parser import KMCParser
+from src.kmc.kmc_parser.integrations.itscop import ITSCOPIntegration
 
 
 def process_template_for_frontend(

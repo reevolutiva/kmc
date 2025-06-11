@@ -1,4 +1,4 @@
-from kmc_parser import (
+from src.kmc.kmc_parser import (
     KMCParser, 
     registry, 
     plugin_manager, 
@@ -11,8 +11,8 @@ from kmc_parser import (
     KMCPlugin
 )
 
-from kmc_parser.handlers.context.project import ProjectHandler
-from kmc_parser.handlers.metadata.doc import DocumentMetadataHandler
+from src.kmc.kmc_parser.handlers.context.project import ProjectHandler
+from src.kmc.kmc_parser.handlers.metadata.doc import DocumentMetadataHandler
 
 class KMC_Parser_TemplateMaker():
     
@@ -37,7 +37,7 @@ class KMC_Parser_TemplateMaker():
         # Crear una nueva instancia de parser para este ejemplo
         parser = self.kmc_parser
         
-        from kmc_parser.extensions.template_maker.template_maker import KMC_TemplateMakerPlugin
+        from src.kmc.kmc_parser.extensions.template_maker.template_maker import KMC_TemplateMakerPlugin
         template_maker_plugin = KMC_TemplateMakerPlugin()
         plugin_manager.register_plugin(template_maker_plugin)
         

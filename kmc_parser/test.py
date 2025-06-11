@@ -1,4 +1,4 @@
-from kmc_parser.extensions.template_maker.integrated_flow import KMC_Parser_TemplateMaker
+from src.kmc.kmc_parser.extensions.template_maker.integrated_flow import KMC_Parser_TemplateMaker
 
 parser = KMC_Parser_TemplateMaker(
     project_data={

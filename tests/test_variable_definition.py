@@ -1,6 +1,6 @@
 import unittest
-from kmc_parser.parser import KMCParser
-from kmc_parser.models import KMCVariableDefinition, GenerativeVariable
+from src.kmc.kmc_parser.parser import KMCParser
+from src.kmc.kmc_parser.models import KMCVariableDefinition, GenerativeVariable
 
 class TestKMCDefinition(unittest.TestCase):
     """Pruebas para la funcionalidad de KMC_DEFINITION"""

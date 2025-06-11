@@ -22,7 +22,7 @@ El registro central (`registry`) es un punto único de acceso para todos los han
 - Descubrir handlers en tiempo de ejecución
 
 ```python
-from kmc_parser import registry, KMCParser
+from src.kmc.kmc_parser import registry, KMCParser
 
 # Registrar un handler para variables de proyecto
 registry.register_context_handler("project", mi_handler_proyecto)
@@ -51,7 +51,7 @@ El sistema de plugins permite empaquetar múltiples handlers y funcionalidades r
 - `plugin_manager`: Gestor de plugins para cargar/descargar plugins dinámicamente
 
 ```python
-from kmc_parser import KMCPlugin, plugin_manager
+from src.kmc.kmc_parser import KMCPlugin, plugin_manager
 
 class MiPlugin(KMCPlugin):
     def initialize(self):
@@ -67,7 +67,7 @@ plugin_manager.register_plugin(MiPlugin())
 ### 1. Crear un Handler Personalizado
 
 ```python
-from kmc_parser import ContextHandler, context_handler
+from src.kmc.kmc_parser import ContextHandler, context_handler
 
 @context_handler("cliente")
 class ClienteHandler(ContextHandler):
@@ -82,8 +82,8 @@ class ClienteHandler(ContextHandler):
 ### 2. Crear un Handler Generativo
 
 ```python
-from kmc_parser import GenerativeHandler, generative_handler
-from kmc_parser.models import GenerativeVariable
+from src.kmc.kmc_parser import GenerativeHandler, generative_handler
+from src.kmc.kmc_parser.models import GenerativeVariable
 
 @generative_handler("api:mysql")
 class MySQLHandler(GenerativeHandler):
@@ -104,8 +104,8 @@ class MySQLHandler(GenerativeHandler):
 ### 3. Crear un Plugin Completo
 
 ```python
-from kmc_parser import KMCPlugin, registry
-from kmc_parser.handlers.base import GenerativeHandler
+from src.kmc.kmc_parser import KMCPlugin, registry
+from src.kmc.kmc_parser.handlers.base import GenerativeHandler
 
 class MiHandlerEspecializado(GenerativeHandler):
     # Implementación del handler...
@@ -153,7 +153,7 @@ Para integrar la arquitectura expandible en una aplicación que ya usa KMC Parse
 3. Crea plugins para agrupar funcionalidades relacionadas
 
 ```python
-from kmc_parser import KMCParser, registry
+from src.kmc.kmc_parser import KMCParser, registry
 
 # Registrar handlers personalizados
 registry.register_context_handler("mi_tipo", mi_handler)

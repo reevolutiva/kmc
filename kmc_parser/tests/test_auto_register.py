@@ -97,7 +97,7 @@ Enumera los objetivos principales de [[project:nombre]]
         self.assertEqual(parser.metadata_handlers["doc"]("version"), "v1.0-test-custom")
         
         # Para probar el handler generativo, necesitamos simular una variable generativa
-        from kmc_parser.models import GenerativeVariable
+        from src.kmc.kmc_parser.models import GenerativeVariable
         test_gen_var = GenerativeVariable(category="ai", subtype="gpt4", name="resumen")
         self.assertEqual(parser.generative_handlers["ai:gpt4"](test_gen_var), "Custom AI content for resumen")
 

@@ -7,8 +7,8 @@ import sys
 # Añadir el directorio principal al path para importar módulos del proyecto
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from kmc_parser import KMCParser
-from kmc_parser.integrations import LlamaIndexHandler, LlamaIndexQAHandler
+from src.kmc.kmc_parser import KMCParser
+from src.kmc.kmc_parser.integrations import LlamaIndexHandler, LlamaIndexQAHandler
 from src.utils.index import FAISSIndex
 from src.utils.llamaindex import LlamaIndexMiddleware
 from src.utils.documentBuilder import DocumentBuilder

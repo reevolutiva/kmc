@@ -13,7 +13,7 @@ from src.utils.llamaindex import LlamaIndexMiddleware
 from src.utils.documentBuilder import DocumentBuilder
 from src.models.models import ChainFactory, ChainConfig
 
-from ..parser import KMCParser
+from src.kmc.kmc_parser.parser import KMCParser
 
 
 class ITSCOPIntegration:

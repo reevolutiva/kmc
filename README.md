@@ -76,7 +76,7 @@ Este enfoque unificado permite crear plantillas dinámicas, interactivas y adapt
 ## Inicio Rápido | Quick Start
 
 ```python
-from kmc_parser import KMCParser
+from src.kmc.kmc_parser import KMCParser
 
 # Inicializar el parser
 parser = KMCParser()
@@ -121,7 +121,7 @@ KMC consta de varios componentes:
 2. **Sistema de Registro Centralizado** (`kmc_parser/core/registry.py`): Punto único para registrar y recuperar handlers de variables  
    *Centralized Registry System (`kmc_parser/core/registry.py`): Single point for registering and retrieving variable handlers*
    ```python
-   from kmc_parser import registry
+   from src.kmc.kmc_parser import registry
    
    # Registrar un handler para variables de proyecto
    registry.register_context_handler("project", mi_handler_proyecto)
@@ -133,7 +133,7 @@ KMC consta de varios componentes:
 3. **Jerarquía de Handlers** (`kmc_parser/handlers/base.py`): Clases base para diferentes tipos de variables  
    *Handler Hierarchy (`kmc_parser/handlers/base.py`): Base classes for different types of variables*
    ```python
-   from kmc_parser import ContextHandler, context_handler
+   from src.kmc.kmc_parser import ContextHandler, context_handler
    
    @context_handler("user")
    class UserHandler(ContextHandler):
@@ -145,7 +145,7 @@ KMC consta de varios componentes:
 4. **Sistema de Plugins** (`kmc_parser/extensions/plugin_manager.py`): Marco para extender la funcionalidad del parser  
    *Plugin System (`kmc_parser/extensions/plugin_manager.py`): Framework for extending parser functionality*
    ```python
-   from kmc_parser import KMCPlugin, plugin_manager
+   from src.kmc.kmc_parser import KMCPlugin, plugin_manager
    
    class MiPlugin(KMCPlugin):
        def initialize(self):
@@ -230,7 +230,7 @@ El KMC Parser ahora incorpora una arquitectura expandible que facilita la extens
 ### Uso simple con registro automático | Simple usage with automatic registration
 
 ```python
-from kmc_parser import KMCParser
+from src.kmc.kmc_parser import KMCParser
 
 # Crear el parser | Create the parser
 parser = KMCParser()
@@ -283,7 +283,7 @@ print(resultado_renderizado)
 ### Uso avanzado con handlers y plugins | Advanced usage with handlers and plugins
 
 ```python
-from kmc_parser import KMCParser, registry, ContextHandler, plugin_manager
+from src.kmc.kmc_parser import KMCParser, registry, ContextHandler, plugin_manager
 
 # Creando un handler personalizado
 class ProjectHandler(ContextHandler):
@@ -313,7 +313,7 @@ La arquitectura expandible de KMC facilita la creación de extensiones:
 
 1. **Crear un handler personalizado | Create a custom handler**
 ```python
-from kmc_parser import ContextHandler, context_handler
+from src.kmc.kmc_parser import ContextHandler, context_handler
 
 @context_handler("cliente")
 class ClienteHandler(ContextHandler):
@@ -326,8 +326,8 @@ class ClienteHandler(ContextHandler):
 
 2. **Crear un plugin completo | Create a complete plugin**
 ```python
-from kmc_parser import KMCPlugin, registry
-from kmc_parser.handlers.base import GenerativeHandler
+from src.kmc.kmc_parser import KMCPlugin, registry
+from src.kmc.kmc_parser.handlers.base import GenerativeHandler
 
 class ApiWeatherHandler(GenerativeHandler):
     def _generate_content(self, var):
@@ -395,7 +395,7 @@ KMC está diseñado para proporcionar un flujo de trabajo claro y modular para d
 2. **Preparar el KMC Parser y definir handlers personalizados (opcional)**  
    *Set up the KMC Parser and define custom handlers (optional)*
    ```python
-   from kmc_parser import KMCParser
+   from src.kmc.kmc_parser import KMCParser
 
    parser = KMCParser()
 

@@ -1,7 +1,7 @@
 from pydantic import BaseModel
-from kmc_parser.extensions.lib.llamaindex import LlamaIndexMiddleware
+from src.kmc.kmc_parser.extensions.lib.llamaindex import LlamaIndexMiddleware
 import re
-from kmc_parser import (
+from src.kmc.kmc_parser import (
     registry, 
     GenerativeHandler,
     KMCPlugin

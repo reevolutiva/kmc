@@ -10,7 +10,7 @@ import json
 # Agregar la ruta del proyecto al path para poder importar kmc_parser
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from kmc_parser import (
+from src.kmc.kmc_parser import (
     KMCParser, 
     registry, 
     plugin_manager, 
@@ -22,11 +22,11 @@ from kmc_parser import (
     generative_handler,
     KMCPlugin
 )
-from kmc_parser.extensions.api_plugin import ExternalAPIsPlugin
-from kmc_parser.handlers.context.project import ProjectHandler
-from kmc_parser.handlers.metadata.doc import DocumentMetadataHandler
-from kmc_parser.handlers.generative.ai.gpt4 import GPT4Handler
-from kmc_parser.models import GenerativeVariable
+from src.kmc.kmc_parser.extensions.api_plugin import ExternalAPIsPlugin
+from src.kmc.kmc_parser.handlers.context.project import ProjectHandler
+from src.kmc.kmc_parser.handlers.metadata.doc import DocumentMetadataHandler
+from src.kmc.kmc_parser.handlers.generative.ai.gpt4 import GPT4Handler
+from src.kmc.kmc_parser.models import GenerativeVariable
 
 
 # Configurar logging
@@ -361,7 +361,7 @@ def ejemplo_plugin_llamaindex():
         "query": "¿Cuál es la capital de Francia?"
     }
     
-    from kmc_parser.extensions.plugin_llamaindex import LlamaIndexGenerativeHandler
+    from src.kmc.kmc_parser.extensions.plugin_llamaindex import LlamaIndexGenerativeHandler
     
     llamaindex_plugin = LlamaIndexGenerativeHandler( config=llamaindex_plugin_config)
     plugin_manager.register_plugin(llamaindex_plugin)
