@@ -12,6 +12,10 @@ from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding
 from llama_index.core import Settings
 from supabase import create_client, Client
 
+# Carga de las variables de entorno desde el archivo .env
+from dotenv import load_dotenv
+load_dotenv()
+
 llm = AzureOpenAI(
     model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
     deployment_name=os.environ["AZURE_OPENAI_DEPLOYMENT"],
@@ -264,6 +268,26 @@ class LlamaIndexMiddleware:
         
         #logging.info(f"Agent query response: {response}")
         return response
+    
+    def intelligent_query(self, query: str):
+        """
+        Perform an intelligent query on the documents.
+        This method will first try to query the index, and if it fails, it will query the LLM directly.
+        """
+        logging.info(f"Intelligent query initiated with query: {query}")
+        
+        try:
+            index = self.get_index_from_db()
+            response = self.query_index(index, query)
+            
+            if not response or response.response == "Empty Response":
+                response = llm.complete(prompt=query)
+                return response.text if hasattr(response, "text") else str(response)
+            
+        except Exception as e:
+            response = llm.complete(prompt=query)
+            return response.text if hasattr(response, "text") else str(response)
+
     
     def files_agent_query(self, query: str, docs_id: list):
         """

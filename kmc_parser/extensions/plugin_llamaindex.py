@@ -32,7 +32,7 @@ class LlamaIndexQuery(GenerativeHandler):
         # Procesar el prompt asociado a la variable
         print("Cargando LlamaIndex Middleware para la consulta...")
         if hasattr(var, 'prompt') and var.prompt:
-            return llamaindex_middleware.llm_query(var.prompt)
+            return llamaindex_middleware.intelligent_query(var.prompt)
         return "Prompt no proporcionado"
 
 class LlamaIndexGenerativeHandler(KMCPlugin):
